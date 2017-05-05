@@ -32,12 +32,12 @@ def make_inlist_inputs(runname, Z, startype):
     #Array of all masses
     massgrid = lambda i,f,step: np.linspace(i,f,round(((f-i)/step))+1.0)
 
-    bigmassgrid = np.unique(np.hstack((massgrid(0.1,0.3,0.05),\
-                                           massgrid(0.3,0.4,0.01), massgrid(0.4,0.9,0.05),\
-                                           massgrid(0.92,2.8,0.02), massgrid(3.0,8.0,0.2),\
-                                           massgrid(9,20,1), massgrid(20,40,2), massgrid(40,150,5),\
-                                           massgrid(150, 300, 25))
-                                        ))
+    bigmassgrid = np.unique(np.hstack((massgrid(0.3, 1.0, 0.05), massgrid(1.0, 2.0, 0.04), massgrid(2.0, 8.0, 0.2)) ))  #massgrid(0.1,0.3,0.05),\
+                                           # massgrid(0.3,0.4,0.01), massgrid(0.4,0.9,0.05),\
+                                           # massgrid(0.92,2.8,0.02), massgrid(3.0,8.0,0.2),\
+                                           # massgrid(9,20,1), massgrid(20,40,2), massgrid(40,150,5),\
+                                           # massgrid(150, 300, 25))
+                                        #))
 
     #Choose the correct mass range and boundary conditions                                   
     if (startype == 'VeryLow'):
@@ -81,7 +81,7 @@ def make_inlist_inputs(runname, Z, startype):
         bclabellist = list([bclabel]*np.size(massindex))
     
     #Create abundance lists
-    h1h2he3he4z = calc_xyz.calc_xyz(float(Z), input_feh=False)
+    h1h2he3he4z = calc_xyz.calc_xyz(float(Z))
     H1list = [h1h2he3he4z[0]]*np.size(massindex)
     H2list = [h1h2he3he4z[1]]*np.size(massindex)
     He3list = [h1h2he3he4z[2]]*np.size(massindex)

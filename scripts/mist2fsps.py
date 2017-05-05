@@ -18,13 +18,15 @@ def read_mist(file):
     #Read header info
     with open(file) as f:
         data = f.readlines()
-    header = data[:11]
-    print '------------------------------------------------------------'
-    print file
-    print '------------------------------------------------------------'
+        header = data[0:3]
+        print '------------------------------------------------------------'
+        print header[0].split('\n')[0]
+        print header[1].split('\n')[0]
+        print header[2].split('\n')[0]
+        print '------------------------------------------------------------'
     
     #Read the column names
-    colname_string1 = data[10]
+    colname_string1 = data[4]
     colname_string2 = colname_string1.replace("\n", "")
     colname_string3 = colname_string2.replace("#", "")
     colname_list = colname_string3.split()
@@ -34,7 +36,7 @@ def read_mist(file):
 
     return data, colname_list
 
-def write_fsps_iso(file, logage=False):
+def write_fsps_iso(file):
     
     """
     
@@ -56,13 +58,10 @@ def write_fsps_iso(file, logage=False):
     numrow = np.shape(data)[0]
     
     #Format specifications
-    fmt = "{:8.3f}{:14.8f}{:14.8f}{:14.8f}{:14.8f}{:14.8f}{:14.8f}{:14.8f}{:14.5e}"
+    fmt = "{:8.2f}{:14.8f}{:14.8f}{:14.8f}{:14.8f}{:14.8f}{:14.8f}{:14.8f}{:14.5e}"
     
     #Identify columns
-    if logage == True:
-        log_age = data[:, mist_col_names.index('log10_isochrone_age_yr')].T
-    else:
-        log_age = np.log10(data[:, mist_col_names.index('isochrone_age_yr')].T)
+    log_age = data[:, mist_col_names.index('log10_isochrone_age_yr')].T    
     mini = data[:, mist_col_names.index('initial_mass')].T
     mact = data[:, mist_col_names.index('star_mass')].T
     log_L = data[:, mist_col_names.index('log_L')].T

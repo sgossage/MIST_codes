@@ -21,13 +21,18 @@ import math
 import os
 import numpy as np
 
-def make_blend_input_file(runname, file1, file2):
+# SSG added custom_path, see comment in make_eeps_isos for more details.
+def make_blend_input_file(runname, file1, file2, custom_path=None):
 
     #Convert MIST_vXX_feh_XXX_afe_XXX back to MIST_vXX/feh_XXX_afe_XXX
     runname_original = runname.split('_feh')[0]+'/feh'+runname.split('feh')[1]
 
     #Generate the name of the input file for the blending code
-    eeps_dir = os.path.join(os.path.join(os.environ['MIST_GRID_DIR'], runname_original), "eeps")
+    if not custom_path:
+        eeps_dir = os.path.join(os.path.join(os.environ['MIST_GRID_DIR'], runname_original), "eeps")
+    else:
+        eeps_dir = os.path.join(os.path.join(custom_path, runname_original), "eeps") 
+
     mass = file1.split('M')[0]
     float_mass = float(mass)/100.0
 

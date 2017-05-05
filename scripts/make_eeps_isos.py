@@ -19,14 +19,24 @@ import subprocess
 import make_blend_input_file
 import make_iso_input_file
 
-def make_eeps_isos(runname, basic=False, fsps=False):
+# SSG added the custom_path argument in order to allow specification of a new directory.
+# The intent was to allow for recreation of the .iso file for a run, e.g. if I wanted to
+# change the age resolution.
+def make_eeps_isos(runname, basic=False, fsps=False, custom_path=None):
     
+    #print(custom_path)
+
     #Path to the new organized directory
-    newdirname = os.path.join(os.environ['MIST_GRID_DIR'],runname)
-    
+    if not custom_path:
+        newdirname = os.path.join(os.environ['MIST_GRID_DIR'],runname)
+    else:
+        newdirname = os.path.join(custom_path, runname)
+
+    #print(newdirname)
+
     runname_format = '_'.join(runname.split('/'))
     inputfile = "input."+runname_format
-    
+
     #if basic = True, then only print out a very basic set of columns
     #if basic != True, then print out all of the columns except for things like num_retries, etc.
 
@@ -36,105 +46,118 @@ def make_eeps_isos(runname, basic=False, fsps=False):
     else:
         shutil.copy(os.path.join(os.environ['MIST_CODE_DIR'], 'mesafiles/my_history_columns_full.list'), os.path.join(os.environ['ISO_DIR'], 'my_history_columns_full.list'))
 
-    #Make the input file for the isochrones code to make eeps
-    make_iso_input_file.make_iso_input_file(runname, "eeps", basic)
-    
-    #cd into the isochrone directory and run the codes
-    os.chdir(os.environ['ISO_DIR'])
-    os.system("./make_eep " + inputfile)
-    
-    #Loop through the low and high masses and blend the tracks
-    initial_eeps_list_fullname = glob.glob(os.path.join(os.environ['MIST_GRID_DIR'], runname+"/eeps/*.eep"))
-    initial_eeps_list = [x.split('eeps/')[1] for x in initial_eeps_list_fullname]
-    blend_ind = ['M_' in x for x in initial_eeps_list]
-    blend_list = [x for x, y in zip(initial_eeps_list, blend_ind) if y]
-    blend_list.sort()
-    for i, filename in enumerate(blend_list[::2]):
-        os.chdir(os.environ['MIST_CODE_DIR'])
-        make_blend_input_file.make_blend_input_file(runname_format, filename, blend_list[i*2+1])
+    if not custom_path:
+        #Make the input file for the isochrones code to make eeps
+        make_iso_input_file.make_iso_input_file(runname, "eeps", basic, custom_path=custom_path)
+
+        #cd into the isochrone directory and run the codes
         os.chdir(os.environ['ISO_DIR'])
-        os.system("./blend_eeps input.blend_"+ runname_format)
+        os.system("./make_eep " + inputfile)
+    
+        #Loop through the low and high masses and blend the tracks
+        if not custom_path:
+            initial_eeps_list_fullname = glob.glob(os.path.join(os.environ['MIST_GRID_DIR'], runname+"/eeps/*.eep"))
+        else:
+            initial_eeps_list_fullname = glob.glob(os.path.join(custom_path, runname+"/eeps/*.eep"))
+
+        #print(initial_eeps_list_fullname)
+
+        initial_eeps_list = [x.split('eeps/')[1] for x in initial_eeps_list_fullname]
+        blend_ind = ['M_' in x for x in initial_eeps_list]
+        blend_list = [x for x, y in zip(initial_eeps_list, blend_ind) if y]
+        blend_list.sort()
+        for i, filename in enumerate(blend_list[::2]):
+            os.chdir(os.environ['MIST_CODE_DIR'])
+            make_blend_input_file.make_blend_input_file(runname_format, filename, blend_list[i*2+1], custom_path = custom_path)
+            os.chdir(os.environ['ISO_DIR'])
+            os.system("./blend_eeps input.blend_"+ runname_format)
         
     #Make the input file for the isochrones code to make isochrones
     os.chdir(os.environ['MIST_CODE_DIR'])
-    make_iso_input_file.make_iso_input_file(runname, "iso", basic)
+    make_iso_input_file.make_iso_input_file(runname, "iso", basic, custom_path=custom_path)
     
     #Run the isochrone code
     os.chdir(os.environ['ISO_DIR'])
     os.system("./make_iso " + inputfile)
+    #if basic == False:
+    #    iso_name = os.path.join(os.path.join(newdirname, "isochrones"), '_'.join(runname.split('/'))+"_full.iso")
+    #    os.system("./make_cmd " + iso_name)
+    #    os.system("mv " + iso_name+".cmd " + iso_name.split("_full")[0]+".iso.cmd")
 
-    #Get the path to the home directory for the run (runname)
-    with open(inputfile) as f:
-        lines=f.readlines()
-    tracks_directory = lines[5].replace("\n", "")
-    home_run_directory = tracks_directory.split("/tracks")[0]
+    if not custom_path:
+        #Get the path to the home directory for the run (runname)
+        with open(inputfile) as f:
+            lines=f.readlines()
+        tracks_directory = lines[5].replace("\n", "")
+        #print(tracks_directory + " !!")
+        home_run_directory = tracks_directory.split("/tracks")[0]
 
-    #Get the total number of EEPs from input.eep
-    #12 lines of header
-    with open(os.path.join(os.environ['ISO_DIR'], "input.eep"), "r") as inputf:
-        inputeep_data = inputf.readlines()
-    #Add 1 to account for the first primary EEP
-    lowmass_num_lines = 12 + 1
-    intmass_num_lines = 12 + 1
-    highmass_num_lines = 12 + 1
-    for i_l, line in enumerate(inputeep_data[2:8]):
-        #Get the secondary EEP number
-        numseceep = int(line.strip('\n').split(' ')[-1])
-        #Add one for each primary EEP
-        if i_l < 3:
-            lowmass_num_lines += numseceep+1
-        if i_l < 7:
-            highmass_num_lines += numseceep+1 
-        intmass_num_lines += numseceep+1
+        #Get the total number of EEPs from input.eep
+        #12 lines of header
+        with open(os.path.join(os.environ['ISO_DIR'], "input.eep"), "r") as inputf:
+            inputeep_data = inputf.readlines()
+        #Add 1 to account for the first primary EEP
+        lowmass_num_lines = 12 + 1
+        intmass_num_lines = 12 + 1
+        highmass_num_lines = 12 + 1
+        for i_l, line in enumerate(inputeep_data[2:6]):
+            #Get the secondary EEP number
+            numseceep = int(line.strip('\n').split(' ')[-1])
+            #Add one for each primary EEP
+            if i_l < 3:
+                lowmass_num_lines += numseceep+1
+            if i_l < 7:
+                highmass_num_lines += numseceep+1 
+            intmass_num_lines += numseceep+1
 
-    #Generate a list of incomplete EEPs
-    eeps_directory = os.path.join(home_run_directory, "eeps")
-    incomplete_eeps_arr = []
-    for eepname in glob.glob(eeps_directory + "/*.eep"):
-        #Remove the pre-blended EEPs
-        if "M_" in eepname:
-            os.system("rm -f " + eepname)
-            continue        
-        #Check the length of each EEP file and identify the ones that are incomplete
-        numeeps = int(subprocess.Popen('wc -l '+eepname, stdout=subprocess.PIPE, shell=True).stdout.read().split(' ')[-2])
-        mass_val = float(eepname.split('M.track')[0].split('/')[-1])/100.0
-        if ((mass_val<=0.7)&(numeeps!=lowmass_num_lines)):
-            incomplete_eeps_arr.append(eepname)
-        if ((mass_val>0.7)&(mass_val<10.0)&(numeeps!=intmass_num_lines)):
-            if ((mass_val>6.0)&(mass_val<10.0)&(numeeps==highmass_num_lines)):
-                continue
-            else:
+        #Generate a list of incomplete EEPs
+        eeps_directory = os.path.join(home_run_directory, "eeps")
+        incomplete_eeps_arr = []
+        for eepname in glob.glob(eeps_directory + "/*.eep"):
+            #Remove the pre-blended EEPs
+            if "M_" in eepname:
+                os.system("rm -f " + eepname)
+                continue        
+            #Check the length of each EEP file and identify the ones that are incomplete
+            numeeps = int(subprocess.Popen('wc -l '+eepname, stdout=subprocess.PIPE, shell=True).stdout.read().split(' ')[-2])
+            mass_val = float(eepname.split('M.track')[0].split('/')[-1])/100.0
+            if ((mass_val<=0.7)&(numeeps!=lowmass_num_lines)):
                 incomplete_eeps_arr.append(eepname)
-        if ((mass_val>=10.0)&(numeeps!=highmass_num_lines)):
-            incomplete_eeps_arr.append(eepname)
+            if ((mass_val>0.7)&(mass_val<10.0)&(numeeps!=intmass_num_lines)):
+                if ((mass_val>6.0)&(mass_val<10.0)&(numeeps==highmass_num_lines)):
+                    continue
+                else:
+                    incomplete_eeps_arr.append(eepname)
+            if ((mass_val>=10.0)&(numeeps!=highmass_num_lines)):
+                incomplete_eeps_arr.append(eepname)
 
-    #Make the input file for the track interpolator consisting of only complete EEP files to interpolate bad EEPs from
-    os.chdir(os.environ['MIST_CODE_DIR'])
-    min_good_mass, max_good_mass = make_iso_input_file.make_iso_input_file(runname, "interp_eeps", basic, incomplete=incomplete_eeps_arr)
-    for incomplete_eeps in incomplete_eeps_arr:
-        mass_val = float(incomplete_eeps.split('M.track')[0].split('/')[-1])/100.0
-        if (mass_val < min_good_mass) | (mass_val > max_good_mass):
-            incomplete_eeps_arr.pop(incomplete_eeps_arr.index(incomplete_eeps))
-
-    #Make the input.track file 
-    os.chdir(os.environ['ISO_DIR'])    
-    header = ["#input file containing list of EEPs\n", inputfile+"\n", "#number of new tracks to interpolate\n", str(len(incomplete_eeps_arr))+"\n", "#masses and output filenames\n"]
-    with open("input.tracks_"+runname_format, "w") as trackinputfile:
-        for headerline in header:
-            trackinputfile.write(headerline)
+        #Make the input file for the track interpolator consisting of only complete EEP files to interpolate bad EEPs from
+        os.chdir(os.environ['MIST_CODE_DIR'])
+        min_good_mass, max_good_mass = make_iso_input_file.make_iso_input_file(runname, "interp_eeps", basic, incomplete=incomplete_eeps_arr, custom_path=custom_path)
         for incomplete_eeps in incomplete_eeps_arr:
             mass_val = float(incomplete_eeps.split('M.track')[0].split('/')[-1])/100.0
-            eepline = str(mass_val) + ' ' + incomplete_eeps.split('/')[-1] + "_INTERP\n"
-            trackinputfile.write(eepline)
+            if (mass_val < min_good_mass) | (mass_val > max_good_mass):
+                incomplete_eeps_arr.pop(incomplete_eeps_arr.index(incomplete_eeps))
 
-    #Write out a textfile of interpolated EEPs
-    incomplete_eeps_arr.sort()
-    with open(eeps_directory+"/interpolated_eeps.txt", "w") as list_interp_eeps:
-        for incomplete_eeps in incomplete_eeps_arr:
-            list_interp_eeps.write(incomplete_eeps+"\n")
+        #Make the input.track file 
+        os.chdir(os.environ['ISO_DIR'])    
+        header = ["#input file containing list of EEPs\n", inputfile+"\n", "#number of new tracks to interpolate\n", str(len(incomplete_eeps_arr))+"\n", "#masses and output filenames\n"]
+        with open("input.tracks_"+runname_format, "w") as trackinputfile:
+            for headerline in header:
+                trackinputfile.write(headerline)
+            for incomplete_eeps in incomplete_eeps_arr:
+                mass_val = float(incomplete_eeps.split('M.track')[0].split('/')[-1])/100.0
+                eepline = str(mass_val) + ' ' + incomplete_eeps.split('/')[-1] + "_INTERP\n"
+                trackinputfile.write(eepline)
 
-    #Interpolate the new tracks
-    os.system("./make_track " + "input.tracks_"+runname_format)
+        #Write out a textfile of interpolated EEPs
+        incomplete_eeps_arr.sort()
+        with open(eeps_directory+"/interpolated_eeps.txt", "w") as list_interp_eeps:
+            for incomplete_eeps in incomplete_eeps_arr:
+                list_interp_eeps.write(incomplete_eeps+"\n")
+
+        #Interpolate the new tracks
+        os.system("./make_track " + "input.tracks_"+runname_format)
     
     #Make the FSPS isochrones
     if fsps==True:

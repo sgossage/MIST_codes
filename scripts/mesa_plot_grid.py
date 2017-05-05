@@ -5,13 +5,15 @@ Makes HR diagrams of tracks from MESA grids.
 """
 
 import glob
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 import os
 import numpy as np
 
-import read_mist_models
+from plot_routine import read_mist_models
 
-def plot_HRD(gridname, logg=False):
+def plot_HRD(gridname, logg_flag=False, lc = 'RoyalBlue'):
     
     """
     
@@ -27,37 +29,45 @@ def plot_HRD(gridname, logg=False):
         None
         
     """
+
     #Assumes gridname has the form MIST_vXX/feh_XXX_afe_XXX
     lowest_dir = gridname.split('/')[-1]
-    grid_dir = os.path.join(os.environ['MIST_GRID_DIR'], gridname)
+    grid_dir = os.path.join(os.environ['STORE_DIR'],'MIST_v1.0','output', gridname)
+ 
     filelist = glob.glob(os.path.join(grid_dir, 'eeps/*M.track.eep'))
+
     for file in filelist:
         starmass = float(file.split('eeps/')[1].split('M')[0])/100.0
+
         star = read_mist_models.EEP(file)
         logTeff, logL, logg = star.eeps['log_Teff'], star.eeps['log_L'], star.eeps['log_g']
-    	if logg == False:
-            plt.plot(logTeff, logL, color='RoyalBlue')
+
+    	if logg_flag == False:
+            ax.plot(logTeff, logL, color = lc, label = '{:s} Msun ([Fe/H] = {:s}, v/vcrit = {:s})'.format(str(starmass), gridname.split('_')[1], gridname.split('vvcrit')[-1]))
+
             if starmass < 0.8:
-                plt.axis([5.5, 3.0, -6, 4])
+                ax.axis([5.5, 3.0, -6, 4])
             elif starmass < 10.0:
-                plt.axis([5.5, 3.0, -2, 5.5])
+                ax.axis([5.5, 3.0, -2, 5.5])
             else:
-                plt.axis([5.5, 3.0, 3, 7])
+                ax.axis([5.5, 3.0, 3, 7])
             figname = os.path.join(grid_dir, 'plots/'+lowest_dir+'_'+file.split('eeps/')[1].split('M')[0] +'M'+ file.split('eeps/')[1].split('M')[1].split('.track')[0]+'_track_ind.pdf')
 
-        elif logg == True:
-            plt.plot(logTeff, logg, color='RoyalBlue')
+        elif logg_flag == True:
+            ax.plot(logTeff, logg, color = lc, label = '{:s} Msun ([Fe/H] = {:s}, v/vcrit = {:s})'.format(str(starmass), gridname.split('_')[1], gridname.split('vvcrit')[-1]))
+
             if starmass < 0.8:
-                plt.axis([5.5, 3.0, 9, 0])
+                ax.axis([5.5, 3.0, 9, 0])
             elif starmass < 10.0:
-                plt.axis([5.5, 3.0, 9, -2])
+                ax.axis([5.5, 3.0, 9, -2])
             else:
-                plt.axis([5.5, 3.0, 7, -3])
+                ax.axis([5.5, 3.0, 7, -3])
             figname = os.path.join(grid_dir, 'plots/'+lowest_dir+'_'+file.split('eeps/')[1].split('M')[0] +'M'+ file.split('eeps/')[1].split('M')[1].split('.track')[0]+'_track_logg_ind.pdf')
             
-    	plt.title(str(starmass))
+        ax.set_title(str(starmass))
+        os.system('mkdir {:s}'.format(os.path.join(grid_dir, 'plots')))
         plt.savefig(figname)
-    	plt.clf()
+        plt.clf()
 
 def format_age(age):
     
@@ -85,14 +95,15 @@ def plot_iso(gridname):
         
     """
     #Assumes gridname has the form MIST_vXX/feh_XXX_afe_XXX
-    grid_dir = os.path.join(os.environ['MIST_GRID_DIR'], gridname)
+    #grid_dir = os.path.join(os.environ['MIST_GRID_DIR'], gridname)
+    grid_dir = os.path.join(os.environ['STORE_DIR'],'MIST_v1.0','output', gridname)
     lowest_dir = gridname.split('/')[-1]
     iso_dir = glob.glob(os.path.join(grid_dir, 'isochrones/MIST*iso'))[0]
     isochrone = read_mist_models.ISO(iso_dir)
     
-    age_list = np.linspace(5, 10.3, 107)
+    age_list = np.linspace(7, 10, 150)
     for i_a, age in enumerate(age_list):
-        plt.plot(isochrone.isos[i_a]['log_Teff'], isochrone.isos[i_a]['log_L'], fig_num=1)
+        plt.plot(isochrone.isos[i_a]['log_Teff'], isochrone.isos[i_a]['log_L'])#, fignum=1)
         
         if age <= 7.0:
             plt.axis([5.5, 3.2, -3, 7])
@@ -104,6 +115,7 @@ def plot_iso(gridname):
         plt.title(str(age))
     
         figname = os.path.join(grid_dir, 'plots/'+lowest_dir+'_'+format_age(age)+'_iso_ind.pdf')
+        os.system('mkdir {:s}'.format(os.path.join(grid_dir, 'plots')))
         plt.savefig(figname)
         plt.clf()
         
@@ -151,3 +163,4 @@ def plot_combine(gridname, logg=False, iso=False, remove_pdf=False):
         os.system("rm -f " + os.path.join(grid_dir, 'plots/') + "*ind.pdf")
 
     os.system(command)
+
