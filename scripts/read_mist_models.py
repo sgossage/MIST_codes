@@ -8,7 +8,7 @@ import os
 import glob
 import seaborn
 
-from MIST_codes.fileio import *
+from MIST_codes.scripts.fileio import *
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
