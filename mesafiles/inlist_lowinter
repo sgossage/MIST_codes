@@ -74,7 +74,13 @@
 !WHEN TO STOP
 
       !in run_star_extras, it's set to H1 depletion in the core for low mass stars
-      gamma_center_limit = 20.0
+      !gamma_center_limit = 20.0
+
+      ! For detecting horizontal branch. Only applies when center abundance by mass
+      ! of h1 is < 1d-4. Stop when the center abundance by mass of he4 drops below 
+      ! this limit.
+
+      HB_limit = 0.5
             
 !PHYSICS
 
@@ -92,7 +98,7 @@
       okay_to_reduce_gradT_excess = .true.
       Pextra_factor = 2.0
 
-      !H core overshoot calibrated to M67
+      !H core overshoot calibrated to M67...f=0.016, f0=0.5f=0.008
       overshoot_f_above_nonburn_core = 0.016
       overshoot_f_above_burn_h_core  = 0.016
       overshoot_f_above_burn_he_core = 0.016
@@ -150,7 +156,6 @@
       do_element_diffusion = .true.
       diffusion_dt_limit = 3.15e13
       diffusion_min_T_at_surface = 1d3
-      diffusion_min_dq_at_surface = 1d-3
 
       radiation_turbulence_coeff = 1.0
 	  

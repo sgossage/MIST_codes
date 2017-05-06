@@ -27,6 +27,11 @@
       surf_num_c12_div_num_o16 ! ratio of number fractions, >1 for C star
       v_wind_Km_per_s ! wind velocity
 
+   ! near surface -- for rotation effect on colors (seth added for gravitational darkening)
+
+      surf_r_equatorial_div_r
+      surf_r_polar_div_r
+
    ! just for massive rotating stars
 
       surf_avg_omega_crit ! critical angular rotational frequency at equator
