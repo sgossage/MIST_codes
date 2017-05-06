@@ -3,3 +3,4 @@
 
 #emacs backups
 *~
+*.npz
