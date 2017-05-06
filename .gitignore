@@ -1,0 +1,8 @@
+# ignore...
+
+# compiled code
+*.pyc
+
+# emacs backups
+*~
+*.npz

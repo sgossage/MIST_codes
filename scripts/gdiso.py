@@ -1,7 +1,6 @@
 # Aaron Dotter's grav. darkening code:
 from pylab import *
 from scipy.interpolate import RectBivariateSpline
-from plot_routine.read_mist_models import *
 from copy import copy
 import os
 

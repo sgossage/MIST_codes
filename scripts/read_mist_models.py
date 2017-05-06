@@ -326,7 +326,7 @@ class ISOCMD:
     def pltmass(self, ax, masses=None, alpha=1.0):
 
         """
-            For plotting masses on an isochrone.
+            For plotting masses on an isochrone. Perhaps too complicated -- maybe delete in favor of something simpler.
         """
         x = self.x
         y = self.y
@@ -413,7 +413,7 @@ class ISOCMD:
 
         return base_line, sc
 
-    def isoplot(self, ax, xlim=[], ylim=[], alpha=1.0, shade=0.0):
+    def isoplot(self, ax, masses=None, xlim=[], ylim=[], alpha=1.0, shade=0.0):
         # Plot a CMD of red vs. blue - red:
         if  shade > 1.0 or shade < 0.0:
             shade = 0.0
@@ -422,6 +422,12 @@ class ISOCMD:
         lc = plt.cm.Dark2(shade)
 
         base_line, = ax.plot(self.x, self.y, label=self.lbl, lw = 1, c = lc, alpha=alpha)
+        if isinstance(masses, float):
+            # Get index of nearest mass:
+            diff_arr = abs(self.init_masses - masses)
+            m_i = np.where(diff_arr == np.min(diff_arr))[0][0]
+            ax.scatter(self.x[m_i], self.y[m_i], lw=0.1, alpha=0.5, color = base_line.get_color(), zorder=2)
+            ax.text(self.x[m_i]*0.98, self.y[m_i], '{:.2f}'.format(self.init_masses[m_i]) + r' $M_{\odot}$', fontsize=8, color = 'k')
         
         #if self.xextent == [0,0]:
         #    self.xextent = [self.x.min()-0.05, self.x.max()+0.05]
