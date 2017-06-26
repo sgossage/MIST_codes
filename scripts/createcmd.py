@@ -47,6 +47,7 @@ def createcmd(photstr='UBVRIplus', feh= None, vvcrit = None, cov = None, Av=None
         pathtoisos = os.path.join(storedir, 'MIST_v1.0/output/*/isochrones/{:s}'.format(search_str))
     else:
         pathtoisos = fname
+    print(pathtoisos)
     # Returns a list of paths to each .iso file found in path structure above:
     isofiles = glob.glob(pathtoisos)
     # Go through the .iso file list and run A. Dotter's make_cmd program on them:
@@ -83,15 +84,16 @@ def createcmd(photstr='UBVRIplus', feh= None, vvcrit = None, cov = None, Av=None
                 pass
 
         # For each .iso file, run the iso code:
+        print filename
         if Av == None:
-            agemax = np.amax(np.genfromtxt(filename, usecols=(1,), skip_header = 11))
-            agemin = np.amin(np.genfromtxt(filename, usecols=(1,), skip_header = 11))
-            print('\nCreating .cmd file from {:s} (log10 age range {:f} to {:f})...\n'.format(filename,agemin,agemax))
+            #agemax = np.amax(np.genfromtxt(filename, usecols=(1,), skip_header = 11))
+            #agemin = np.amin(np.genfromtxt(filename, usecols=(1,), skip_header = 11))
+            #print('\nCreating .cmd file from {:s} (log10 age range {:f} to {:f})...\n'.format(filename,agemin,agemax))
             os.system('./make_cmd ' + photstr + ' ' + filename)
         else:
-            agemax = np.amax(np.genfromtxt(filename, usecols=(1,), skip_header = 11))
-            agemin = np.amin(np.genfromtxt(filename, usecols=(1,), skip_header = 11))
-            print('\nCreating .cmd file from {:s} (log10 age range {:f} to {:f})...\n'.format(filename,agemin, agemax))
+            #agemax = np.amax(np.genfromtxt(filename, usecols=(1,), skip_header = 11))
+            #agemin = np.amin(np.genfromtxt(filename, usecols=(1,), skip_header = 11))
+            #print('\nCreating .cmd file from {:s} (log10 age range {:f} to {:f})...\n'.format(filename,agemin, agemax))
             os.system('./make_cmd ' + photstr + ' ' + filename + ' ' + str(Av) + ' ' + '.false.')
 
     # Return to former directory:

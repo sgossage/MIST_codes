@@ -9,7 +9,7 @@ def isopath(vvcrit=None, cov=None):
     """
 
     # Directory leading to the stored .iso files (for MY environment):
-    storedir = os.environ['STORE_DIR']
+    storedir = os.path.join(os.environ['STORE_DIR'], 'MIST_v1.0', 'output')
    
     # Create the string used to search for desired iso files:
 

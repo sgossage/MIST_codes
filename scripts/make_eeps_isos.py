@@ -15,6 +15,7 @@ import glob
 import os
 import shutil
 import subprocess
+import sys
 
 import make_blend_input_file
 import make_iso_input_file
@@ -75,6 +76,7 @@ def make_eeps_isos(runname, basic=False, fsps=False, custom_path=None):
     #Make the input file for the isochrones code to make isochrones
     os.chdir(os.environ['MIST_CODE_DIR'])
     make_iso_input_file.make_iso_input_file(runname, "iso", basic, custom_path=custom_path)
+    #sys.exit() # debug
     
     #Run the isochrone code
     os.chdir(os.environ['ISO_DIR'])
@@ -100,7 +102,7 @@ def make_eeps_isos(runname, basic=False, fsps=False, custom_path=None):
         lowmass_num_lines = 12 + 1
         intmass_num_lines = 12 + 1
         highmass_num_lines = 12 + 1
-        for i_l, line in enumerate(inputeep_data[2:6]):
+        for i_l, line in enumerate(inputeep_data[2:11]):
             #Get the secondary EEP number
             numseceep = int(line.strip('\n').split(' ')[-1])
             #Add one for each primary EEP
@@ -122,14 +124,20 @@ def make_eeps_isos(runname, basic=False, fsps=False, custom_path=None):
             numeeps = int(subprocess.Popen('wc -l '+eepname, stdout=subprocess.PIPE, shell=True).stdout.read().split(' ')[-2])
             mass_val = float(eepname.split('M.track')[0].split('/')[-1])/100.0
             if ((mass_val<=0.7)&(numeeps!=lowmass_num_lines)):
+                #print("numeeps = {:d}; lowmass_num_lines = {:d}".format(numeeps,lowmass_num_lines))
                 incomplete_eeps_arr.append(eepname)
             if ((mass_val>0.7)&(mass_val<10.0)&(numeeps!=intmass_num_lines)):
                 if ((mass_val>6.0)&(mass_val<10.0)&(numeeps==highmass_num_lines)):
                     continue
                 else:
+                    #print("numeeps = {:d}; lowmass_num_lines = {:d}".format(numeeps,highmass_num_lines))
                     incomplete_eeps_arr.append(eepname)
             if ((mass_val>=10.0)&(numeeps!=highmass_num_lines)):
+                #print("numeeps = {:d}; lowmass_num_lines = {:d}".format(numeeps,highmass_num_lines))
                 incomplete_eeps_arr.append(eepname)
+
+        #for ele in incomplete_eeps_arr:
+        #    print(ele)
 
         #Make the input file for the track interpolator consisting of only complete EEP files to interpolate bad EEPs from
         os.chdir(os.environ['MIST_CODE_DIR'])

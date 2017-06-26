@@ -45,9 +45,9 @@ def call_isointerp(vvcrit, feh, cov=None, custom_isopath = None):
 
     # We will sort the dictionary keys (file names or feh strings) by their values (feh values):
     isofname_list = sorted(isodict, key=isodict.__getitem__)
-    #print(isofname_list)
+    print(isofname_list)
     fehstr_list = sorted(fehdict, key=fehdict.__getitem__)
-    #print(fehstr_list)
+    print(fehstr_list)
     filestr_lines = [(fehstr_list[i], isofname_list[i]) for i in range(len(feh_masterlist))]
 
     # isofiles is now a list of the .iso files available at the given vvcrit value.
@@ -83,7 +83,7 @@ def call_isointerp(vvcrit, feh, cov=None, custom_isopath = None):
     os.chdir(isocodedir)
 
     # Make the output file name; using the path to interpolated files relevant to my system:
-    interpolation_dir = '/home/seth/Research/MIST/MISTout/interpolations'
+    interpolation_dir = '/home/seth/Research/MIST/MISTout/MIST_v1.0/output/interpolations'
 
     if feh >= 0.00:
         output_fname = 'MIST_v1.0_feh_p{:.2f}_afe_p0.0_vvcrit{:.1f}_interp.iso'.format(feh, vvcrit)

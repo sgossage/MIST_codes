@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 
-from plot_routine import read_mist_models
+from MIST_codes.scripts import read_mist_models
 
 def plot_HRD(gridname, logg_flag=False, lc = 'RoyalBlue'):
     

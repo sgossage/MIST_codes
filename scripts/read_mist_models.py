@@ -248,7 +248,7 @@ class ISOCMD:
         rotstr = '{:.1f}'.format(vvcrit)
 
         # Get the .iso.cmd file name/path
-        gridname = 'feh_{:s}_afe_p0.0_vvcrit{:s}'.format(fehstr, rotstr)
+        gridname = 'MIST_v1.0/output/feh_{:s}_afe_p0.0_vvcrit{:s}'.format(fehstr, rotstr)
         print(gridname)
         # if there is an extra tag to append (e.g. for diff conv. core ovsh values):
         if exttag != None:
@@ -264,11 +264,36 @@ class ISOCMD:
         #self.filename = cmdf[0]
         return cmdf[0]
 
+    def get_masked(self, hdr_names, phasemask):
+
+        masked_data = []
+        for name in hdr_names:
+            # For masking out phases (e.g. PMS):
+            x = self.eeps[name]
+            p = self.eeps['phase']
+            for pmask in phasemask:
+                unmasked_ind = np.where(p != pmask)
+                # Want a new array of only the valid phases on ea. pass to
+                # keep indices matching between x, y, and p
+                p = p[unmasked_ind]                    
+                x = x[unmasked_ind]
+
+            masked_data.append(x)
+
+        return masked_data, p
+
+
     def set_isodata(self, lage, x_name, y_name, dmod=0.0, ax=None, phasemask=[], x_to_ymx=True, geneva_on=False):
         """
             Given a log10 age, get the data desired to plot the CMD or HRD
         """
         exttag = self.exttag
+
+        age_ind = self.age_index(lage)
+
+        print("Given log10 age: {:.2f}; Closest log10 age: {:.2f}".format(lage, self.isocmds[age_ind]['log10_isochrone_age_yr'][0]))
+        print("Using log10 age = {:.2f}.".format(self.isocmds[age_ind]['log10_isochrone_age_yr'][0]))
+        lage = self.isocmds[age_ind]['log10_isochrone_age_yr'][0]
 
         # For labeling age in potential plots:
         if lage >= 9.0:
@@ -277,14 +302,19 @@ class ISOCMD:
             lage_str = "{:.1f} Myr".format((10**lage)/(10.**6))
 
         if exttag != None:
-            self.lbl = 'MIST({:s}): age = {:s} Myr, [Fe/H] = {:.2f}, vvcrit = {:.1f} (i = {:.1f})'.format(exttag, lage_str,  self.feh, self.rot, self.gdark_i*(180./np.pi))
+            self.lbl = 'MIST({:s}): age = {:s}, [Fe/H] = {:.2f}, vvcrit = {:.1f} (i = {:.1f})'.format(exttag, lage_str,  self.feh, self.rot, self.gdark_i*(180./np.pi))
         else:
             self.lbl = 'MIST: age = {:s}, [Fe/H] = {:.2f}, vvcrit = {:.1f} (i = {:.1f})'.format(lage_str, self.feh, self.rot, self.gdark_i*(180./np.pi))
-
-        age_ind = self.age_index(lage)
         
-        self.x = self.isocmds[age_ind][x_name]
-        self.y = self.isocmds[age_ind][y_name]
+
+        if len(phasemask) > 0:
+            self.x, self.y, self.phases = self.get_masked([x_name, y_name], phasemask=phasemask)
+            self.x += dmod
+            self.y += dmod
+        else:
+            self.x = self.isocmds[age_ind][x_name] + dmod
+            self.y = self.isocmds[age_ind][y_name] + dmod
+            self.phases = self.isocmds[age_ind]['phase']
         # For e.g. colors; assumes y is blue mag if CMD 
         if x_to_ymx:
             self.x = self.y - self.x
@@ -295,11 +325,11 @@ class ISOCMD:
         self.y_name = y_name
 
         if ax is not None:
-            ax.set_ylabel(y_name)
-            ax.set_xlabel(x_name)
+            ax.set_ylabel(u"${:s}$".format(y_name))
+            ax.set_xlabel(u"${:s}$".format(x_name))
             ax.set_xlim([x.max()+0.05, x.min()-0.05])
             ax.set_ylim([y.max()+0.2, y.min()-0.2])
-            ax.set_title('MIST Isochrones: {:s} vs. {:s}'.format(y_name, x_name))
+            ax.set_title(u'MIST Isochrones: ${:s}$ vs. ${:s}$'.format(y_name, x_name))
 
             # If true, this will plot a Geneva model at the given age for comparison, if 
             # the file for it exists.
@@ -310,16 +340,16 @@ class ISOCMD:
         self.init_masses = self.isocmds[age_ind]['initial_mass']
 
         # For masking out phases (e.g. PMS):
-        if len(phasemask) > 0:
-            self.phases = self.isocmds[age_ind]['phase']
-            for i_pmask, pmask in enumerate(phasemask):
-                unmasked_ind = np.where(phases != pmask)
+        #if len(phasemask) > 0:
+        #    self.phases = self.isocmds[age_ind]['phase']
+        #    for i_pmask, pmask in enumerate(phasemask):
+        #        unmasked_ind = np.where(phases != pmask)
                 # Want a new array of only the valid phases on ea. pass to
                 # keep indices matching between x, y, and p
-                self.phases = phases[unmasked_ind]                    
-                self.x = self.x[unmasked_ind]
-                self.y = self.y[unmasked_ind]
-                self.init_masses = self.init_masses[unmasked_ind]
+        #        self.phases = phases[unmasked_ind]                    
+        #        self.x = self.x[unmasked_ind]
+        #        self.y = self.y[unmasked_ind]
+        #        self.init_masses = self.init_masses[unmasked_ind]
 
         return #x, y, init_masses, phases
 
@@ -413,15 +443,19 @@ class ISOCMD:
 
         return base_line, sc
 
-    def isoplot(self, ax, masses=None, xlim=[], ylim=[], alpha=1.0, shade=0.0):
+    def isoplot(self, ax, masses=None, xlim=[], ylim=[], shade=None, legloc='best', legsize=8, **kwargs):
         # Plot a CMD of red vs. blue - red:
         if  shade > 1.0 or shade < 0.0:
             shade = 0.0
-            print("Warning: shade must be a float between 0 and 1.")
+            print("Warning: shade must be between 0 and 1.")
+        if shade != None:
+            lc = plt.cm.Dark2(shade)
+            kwargs['c'] = lc
 
-        lc = plt.cm.Dark2(shade)
+        kwargs['label'] = self.lbl
+        kwargs['lw'] = 1
 
-        base_line, = ax.plot(self.x, self.y, label=self.lbl, lw = 1, c = lc, alpha=alpha)
+        base_line, = ax.plot(self.x, self.y, **kwargs)
         if isinstance(masses, float):
             # Get index of nearest mass:
             diff_arr = abs(self.init_masses - masses)
@@ -450,13 +484,15 @@ class ISOCMD:
         elif len(ylim) == 2:
             self.yextent = ylim
 
-        ax.set_ylabel(self.y_name)
-        ax.set_xlabel(self.x_name)
+        ax.set_ylabel(u"${:s}$".format(self.y_name))
+        ax.set_xlabel(u"${:s}$".format(self.x_name))
         ax.set_xlim(self.xextent)
         ax.set_ylim(self.yextent)
-        ax.set_title('MIST Isochrones: {:s} vs. {:s}'.format(self.y_name, self.x_name))
+        ax.set_title(u'MIST Isochrones: ${:s}$ vs. ${:s}$'.format(self.y_name, self.x_name))
 
-        ax.legend(loc='best')
+        legend = ax.legend(loc=legloc, prop={'size':legsize}, frameon=True)
+        frame = legend.get_frame()
+        frame.set_facecolor('white')
 
         return
 
@@ -472,7 +508,7 @@ class EEP:
     
     """
     
-    def __init__(self, filename, verbose=True):
+    def __init__(self, feh=None, vvcrit=None, mass=None, filename=None, gravdark_i = 0.0, exttag = None, verbose=True):
         
         """
         
@@ -492,14 +528,69 @@ class EEP:
             eeps            Data.
             
         """
-                        
-        self.filename = filename
+        
+        if filename != None:
+            self.filename = filename
+
+        else:
+            self.filename = self.get_fn(feh, vvcrit, mass, exttag)
+            if isinstance(self.filename, list):
+                # find the closest mass:
+                masslist = self.filename
+                masslist = map(float, masslist)
+                diffarr = abs(np.array(masslist) - mass)
+                print(diffarr)
+                print(masslist)
+                close_idx = np.where(diffarr == diffarr.min())[0][0]
+                mass = masslist[close_idx]
+                print(mass)
+                print('Using {:.2f} Msol instead.'.format(mass))
+                self.filename = self.get_fn(feh, vvcrit, mass, exttag)
 
         if verbose:
             print('Reading in: ' + self.filename)
+
+        self.phase_names = ['MS',None, 'SGB+RGB', 'CHeB', 'EAGB', 'TPAGB', 'post-AGB', 'WR', 'PMS']
                         
         self.version, self.abun, self.rot, self.minit, self.hdr_list, self.eeps = self.read_eep_file()
+
+        if gravdark_i > 0.0:
+            # rewrite the luminosity and effective temp according to grav. darkening:
+            self.filename = rw_gdeep(self, self.filename, gravdark_i)
+            self.version, self.abun, self.rot, self.minit, self.hdr_list, self.eeps = self.read_eep_file()
+
+    
+    def get_fn(self, feh, vvcrit, mass, exttag):
+
+        store_dir =  os.path.join(os.environ['STORE_DIR'], 'MIST_v1.0', 'output')
+        if feh < 0.0:
+            fehstr = 'm{:.2f}'.format(abs(feh))
+        else:
+            fehstr = 'p{:.2f}'.format(feh)
+
+        rotstr = '{:.1f}'.format(vvcrit)
+
+        # Getting the track's file name:
+        if exttag == None:
+            gridname = 'feh_{:s}_afe_p0.0_vvcrit{:s}'.format(fehstr, rotstr)
+        else:
+            gridname = 'feh_{:s}_afe_p0.0_vvcrit{:s}_{:s}'.format(fehstr, rotstr, exttag)
+        grid_dir = os.path.join(store_dir, gridname)
+        eepf = get_masstrackeepf(grid_dir, mass)
+
+        # Trying to get the track.eep for a given mass value. Print masses found on failure:
+        if not eepf:
+            filelist = glob.glob(os.path.join(grid_dir, 'eeps/*M.track.eep'))
         
+            print('Valid masses found:\n')
+            masslist = []
+            for f in filelist:
+                starmass = float(f.split('eeps/')[1].split('M')[0])/100.0
+                masslist.append(starmass)
+            return sorted(masslist)
+
+        return eepf
+
     def read_eep_file(self):
         
         """
@@ -523,8 +614,31 @@ class EEP:
         hdr_list = content[11][1:]
         
         return version, abun, rot, minit, hdr_list, eeps
+
+    def get_masked(self, hdr_names, phasemask):
+
+        masked_data = []
+        for name in hdr_names:
+            # For masking out phases (e.g. PMS):
+            x = self.eeps[name]
+            p = self.eeps['phase']
+            for pmask in phasemask:
+                unmasked_ind = np.where(p != pmask)
+                # Want a new array of only the valid phases on ea. pass to
+                # keep indices matching between x, y, and p
+                p = p[unmasked_ind]                    
+                x = x[unmasked_ind]
+
+            masked_data.append(x)
+
+        return masked_data
+
+    def get_phaselen(self, phasemask):
+        ages = self.get_masked(['star_age'], phasemask=phasemask)[0]
+        return ages[-1] - ages[0]
         		
-    def plot_HR(self, fignum=0, phases=[], phasecolor=[], phasemask = [], ax = None, cbar_valname=None, **kwargs):
+    def plot_HR(self, fignum=0, phases=[], phasecolor=[], phasemask = [], ax = None, cbar_valname = None,
+                xlim = [], ylim = [], agemarks = None, legloc = None, showplt = False, savename = None, **kwargs):
         
         """
 
@@ -548,40 +662,39 @@ class EEP:
             >> eep.plot_HR(cbar_valname='surf_avg_omega_div_omega_crit') # Color lines by omega/omega_crit.
         
         """
-        
-        x = self.eeps['log_Teff']
-        y = self.eeps['log_L']
+        hdr_names = ['log_Teff', 'log_L']
+        if cbar_valname is not None:
+            hdr_names.append(cbar_valname)
+        #x = self.eeps['log_Teff']
+        #y = self.eeps['log_L']
         if isinstance(cbar_valname, str):
             cbar_vals = self.eeps[cbar_valname]
             if cbar_valname == 'surf_avg_omega_div_omega_crit':
                 cbarmin = 0.0
                 cbarmax = 1.0
-            # placeholder...
+            # placeholder...should adapt to cbar parameter value range?
             else:
                 cbarmin = 0.0
                 cbarmax = 1.0
 
-            z = cbar_vals
+        #    z = cbar_vals
 
         # For masking out phases (e.g. PMS):
         if len(phasemask) >= 0:
-            p = self.eeps['phase']
-            for i_pmask, pmask in enumerate(phasemask):
-                unmasked_ind = np.where(p != pmask)
-                # Want a new array of only the valid phases on ea. pass to
-                # keep indices matching between x, y, and p
-                p = p[unmasked_ind]                    
-                x = x[unmasked_ind]
-                y = y[unmasked_ind]
-                if isinstance(cbar_valname, str):
-                    z = z[unmasked_ind]
+            if isinstance(cbar_valname, str):
+                x, y, z = self.get_masked(hdr_names, phasemask=phasemask) 
+            else:
+                x, y = self.get_masked(hdr_names, phasemask=phasemask)
+        else:
+            x = self.eeps['log_Teff']
+            y = self.eeps['log_L']
         
         if ax == None:
             fig = plt.figure(fignum)        
             ax = fig.add_subplot(111)
 
-        ax.set_xlabel('log(Teff) [K]')
-        ax.set_ylabel('log(L/Lsun)')
+        ax.set_xlabel(u'log(T_{eff} [K]')
+        ax.set_ylabel(u'log(L/L_{\circdot})')
 
 
         # If supplied, create a color the lines by a third value:
@@ -597,7 +710,7 @@ class EEP:
 
         if len(phases) >= 0:
 
-            phase_names = ['MS',None, 'SGB+RGB', 'CHeB', 'EAGB', 'TPAGB', 'post-AGB', 'WR', 'PMS']
+            phase_names = self.phase_names
             if len(phases) != len(phasecolor):
                 print('The length of the phase and phasecolor array must be identical.')
                 return
@@ -620,6 +733,108 @@ class EEP:
                         fin_phase_age = self.eeps['star_age'][p_ind][-1]
                         phase_deltaT = fin_phase_age - init_phase_age
                         #ax.text(x[p_ind][-1], y[p_ind][-1], r'{:s} $\delta$t = {:.2e}'.format(phase_names[phase], phase_deltaT), fontsize=3)
+        
+        # Code responsible for making marks on the track and coloring it:
+        #--------------------------------------------------------------------------------------
+        # for placement on first loop if masking SGB+ (phase label 2):
+        if 2 in phasemask and False:
+            past_growth1 = False
+            for idx in range(len(x)):
+                if idx > 10:
+                    if y[idx] < y[idx - 1]:
+                        # starting 1st decay:
+                        past_growth1 = True
+                    else:
+                        continue
+
+                if past_growth1:
+                    # if growing again:
+                    if y[idx] > y[idx - 1]:
+                        loop1_idx = idx
+                        break
+                    else:
+                        continue
+            ax.scatter(x[idx], y[idx], marker='+')
+            #txtx = x[loop1_idx]
+            #txty = y[loop1_idx]
+            #xfac = 1.003
+            #yfac = 0.997
+
+        # or else label at the bluest point.
+        else:
+            txtx = x[np.where(x == x.max())]
+            xfac = 1.02
+            txty = y[np.where(x == x.max())]
+            yfac = 0.997
+
+        # Label v/vcrit of the track:
+        #ax.scatter(txtx, txty*yfac, marker = 'x', s=4, label=r'$\frac{\Omega}{\Omega_{crit}} = $' + "{:.1f}".format(self.rot),
+        #                c = [0.4+self.rot, 0, 0.6-self.rot], lw= 0.8, zorder = 9999)  
+
+        # Label the mass of the track:
+        #if self.minit not in plotted_masses:
+        #    ax.text(txtx*xfac, txty*yfac, "{:.2f} ".format(self.minit) + r'$M_{\odot}$', fontsize = 3.5)        
+
+        #plotted_masses.append(self.minit)
+     
+        # marking age points on track:
+        if agemarks != None:
+            ages = self.eeps['star_age']
+            oms = self.eeps['surf_avg_omega_div_omega_crit']
+            # For masking out phases (e.g. PMS):
+            if len(phasemask) >= 0:
+                p = self.eeps['phase']
+                for i_pmask, pmask in enumerate(phasemask):
+                    unmasked_ind = np.where(p != pmask)
+                    # Want a new array of only the valid phases on ea. pass to
+                    # keep indices matching between x, y, and p
+                    p = p[unmasked_ind]                    
+                    #x = x[unmasked_ind]
+                    #y = y[unmasked_ind]
+                    ages = ages[unmasked_ind]
+                    oms = oms[unmasked_ind]
+
+                for agemark in agemarks:
+                    agemark = 10**agemark
+                    dage_arr = abs(ages - agemark)
+                    agediff_i = np.where(dage_arr == np.amin(dage_arr))[0][0]
+                    agemx = x[agediff_i]
+                    agemy = y[agediff_i]
+                    ax.scatter(agemx, agemy, marker = '+', s=20, c = 'k', lw = 0.8)
+                    print("{:.1f} at {:.3f}: {:.2f}".format(self.rot, ages[agediff_i], oms[agediff_i]))
+                        
+            
+        if isinstance(cbar_valname, str):
+            cbar = plt.colorbar(lc, ax=ax)
+            cbar.set_label(cbar_valname)
+        #--------------------------------------------------------------------------------------
+        
+        ax.set_title('HRD Evolutionary Tracks')
+
+        if len(xlim) == 2:
+            ax.set_xlim(xlim)
+        else:
+            ax.set_xlim([1.01*x.max(), 0.99*x.min()])
+
+        if len(ylim) == 2:
+            ax.set_ylim(ylim)
+        else:
+            ax.set_ylim([0.99*y.min(), 1.01*y.max()])
+
+    #    if isinstance(cbar_valname, str):
+    #       cbar = plt.colorbar(lc, ax=ax)
+    #       cbar.set_label(cbar_valname)
+     
+        if legloc != None:
+            plt.legend(loc = legloc, prop={'size':8})
+
+        #if savename == None:
+        if savename != None:
+            plt.savefig(savename, dpi=600)
+        if showplt:
+            print(ax.get_ylim())
+            print(ax.get_xlim())
+            plt.show()
 
         if isinstance(cbar_valname, str):
             return ax, lc, x, y

@@ -59,8 +59,8 @@ def make_iso_input_file(runname, mode, basic, incomplete=[], custom_path=None):
     if mode == 'interp_eeps':
         #print(eeps_dir)
         initial_tracks_list = glob.glob(eeps_dir+"/*M.track.eep")
-        #print(initial_tracks_list)
-        #print(incomplete)
+        print(initial_tracks_list)
+        print(incomplete)
         for failed_eep in incomplete:
             failed_eep_ind = np.where(np.array(initial_tracks_list) == failed_eep)[0][0]
             initial_tracks_list.pop(failed_eep_ind)

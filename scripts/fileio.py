@@ -21,11 +21,19 @@ def get_isocmdf(grid_dir, feh, vvcrit, Av = 0.0, gravdark_i=0.0, exttag=None):
 
         # The .cmd file may still need to be created.
         if exttag == None:
-            isofile = glob.glob(os.path.join(grid_dir, 'isochrones/*full.iso'))[0]
+            isofile = glob.glob(os.path.join(grid_dir, 'isochrones/*basic.iso'))
+            if len(isofile) == 0:
+                isofile = glob.glob(os.path.join(grid_dir, 'isochrones/*full.iso'))
+            isofile = isofile[0]
         else:
-        	isofile = glob.glob(os.path.join(grid_dir, 'isochrones/*{:s}_full.iso'.format(exttag)))[0]
+            isofile = glob.glob(os.path.join(grid_dir, 'isochrones/*{:s}_basic.iso'.format(exttag)))
+            if len(isofile) == 0:
+                isofile = glob.glob(os.path.join(grid_dir, 'isochrones/*full.iso'))
+            isofile = isofile[0]
     
         # Call Aaron's orientation code to recompute Teff and L & create a GDed .cmd
+        print(isofile)
+        print('-----')
         filelist = ccmd.createcmd(fname = isofile, Av = Av, gravdark_i = gravdark_i)
                 
         return filelist
@@ -138,3 +146,22 @@ def plot_geneva_iso(lage, vvcrit, pltmass, plot_index, color_n, ax):
             break 
 
     return
+
+def get_masstrackeepf(grid_dir, mass):
+
+    """
+        Gets the track.eep file for the given mass.
+    """
+
+    mass_string = ''.join(str(mass/100.0).split('.'))
+    # The mass string is 5 digits...e.g. 8.0 = 00800, 0.3 = 00030. Add a zero for missing digits:
+    if len(mass_string) < 5:
+        for i in range(5 - len(mass_string)):
+            mass_string = mass_string + '0'
+
+    filelist = glob.glob(os.path.join(grid_dir, 'eeps/*{:s}M.track.eep'.format(mass_string)))
+    if not filelist:
+        print('No track.eep file was found for {:.1f} Msun.'.format(mass))
+        return filelist
+    else:
+        return filelist[0]

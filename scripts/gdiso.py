@@ -61,7 +61,55 @@ def gdiso(iso, angle):
 
     #print(tempT == origiso['log_Teff'])
 
-    return origiso 
+    return origiso
+
+# angle in radians [0,pi/2]
+def gdtrack(track, angle):
+    #read in an isochrone set
+    #fn=#'/n/conroyfs1/sgossage/MIST_grids/MIST_v1.0/output/feh_p0.15_afe_p0.0_vvcrit0.5/isochrones/MIST_v1.0_feh_p0.15_afe_p0.0_vvcrit0.5_full.iso'
+    #x=ISO(filename) #ISO('MIST_v1.0_feh_p0.00_afe_p0.0_vvcrit0.4_full.iso')
+
+    f_T, f_L = create_interpolants(os.path.join(os.environ['MIST_CODE_DIR'], 'GD.npz'))
+
+    #choose one isochrone for demonstration
+    #iso=x.isos[x.age_index(8.5)]
+    i=squeeze(where( (track['phase']<9999) & (track['phase']>-1) ))#<808 & > 202
+    origtrack = copy(track)
+    # all cols where eep reqs specified above are met:
+    track=track[:][i]
+    omega=track['surf_avg_omega_div_omega_crit']
+    T=pow(10,track['log_Teff'])
+    L=pow(10,track['log_L'])
+
+    #figure(1)
+    #plot the intrinsic model quantities
+    #plot(T,log10(L), color='Lime', label='Intrinsic')
+
+    #plot the gravity-darkened models at i=0, "edge-on"
+    if angle == 0.0: 
+        C_T=f_T.ev(yi=omega, xi=zeros(len(omega)))
+        C_L=f_L.ev(yi=omega, xi=zeros(len(omega)))
+    #plot(C_T*T, log10(C_L*L), color='Blue', label=r'$i=0$')
+
+    #plot the gravity-darkened models at i=90 deg, "face-on"
+    else:
+        C_T=f_T.ev(yi=omega, xi=(angle)*ones(len(omega)))
+        C_L=f_L.ev(yi=omega, xi=(angle)*ones(len(omega)))
+
+    gdlTeff = log10(C_T*T)
+    gdlLum = log10(C_L*L)
+
+    #print(gdlTeff == log10(T))
+
+    #tempT = copy(origiso['log_Teff'])
+    for j, idx in enumerate(i):
+        origtrack['log_Teff'][idx] = gdlTeff[j]
+        origtrack['log_L'][idx] = gdlLum[j]
+        #print(gdlLum[j])
+
+    #print(tempT == origiso['log_Teff'])
+
+    return origtrack
 
 def rw_gdiso(filename, angle):
     # re-writing iso file with grav. darkening effects:
@@ -145,6 +193,74 @@ def rw_gdiso(filename, angle):
 
                 if i < len(isoblocks) - 2:
                     outf.write('\n\n\n')
+
+        return outfname
+
+def rw_gdeep(eep, filename, angle):
+    # re-writing iso file with grav. darkening effects:
+    
+    # convert rad to deg
+    angle_deg = (180./pi)*angle
+    outfname = filename.split('.track.eep')[0] + '_gdark{:.1f}.track.eep'.format(angle_deg)
+    # Check if the .iso file already exists:
+    if os.path.isfile(outfname):
+        print("The .iso file \"{:s}\" already exists and will be used.".format(outfname))
+        return outfname
+    # If it doesn't, create it:
+    else:
+
+        eepobj = eep #EEP(filename)
+
+        numeeps = len(eepobj.eeps)
+
+        # organizing iso data blocks:
+        trackblock = []
+        print('Organizing track data...')
+        numrows = numeeps
+        track = copy(gdtrack(eepobj.eeps, angle))
+
+        for r in range(numrows):
+            row = []
+            for name in eepobj.hdr_list:
+                # adopting precision in MIST .eep files:
+                row.append("{:.16E}".format(track[name][r]))
+
+            trackblock.append(row)
+
+        # get the content preceding data...
+        with open(filename) as origf:
+            origcont = origf.readlines()[0:10]
+        
+        # write data to .iso file in format similar to A. Dotter's iso code.        
+        print("Writing {:s}...".format(outfname))
+        with open(outfname, 'w+') as outf:
+            for line in origcont:
+                outf.write(line)
+
+            # write track data:
+            # for a block, write col number:
+            outf.write('#{:>4s}'.format('1'))
+            for i in range(2,80):
+                outf.write('{:>32s}'.format(str(i)))
+            outf.write('\n')
+
+            # write header:
+            for name in eepobj.hdr_list:
+                if name == eepobj.hdr_list[0]:
+                    outf.write('#{:>4s}'.format(name))
+                else:
+                    outf.write('{:>32s}'.format(name))
+
+            # write data rows
+            for blockrow in trackblock:
+                outf.write('\n')
+                for j, val in enumerate(blockrow):
+                    if j == 0:
+                        outf.write(' {:>4s}'.format(str(val)))
+                    else:
+                        outf.write('{:>32s}'.format(eformat(float(val), 16, 3)))
+
+            outf.write('\n\n\n')
 
         return outfname
 
