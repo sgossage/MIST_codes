@@ -6,7 +6,7 @@ import matplotlib as mpl
 mpl.use('Agg')
 import os
 import glob
-import seaborn
+import seaborn as sns
 # no seaborn gridlines on plot, and white bg:
 sns.set_context('paper')
 sns.set(font='serif')
