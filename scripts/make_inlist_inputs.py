@@ -27,12 +27,14 @@ import numpy as np
 
 import calc_xyz
     
-def make_inlist_inputs(runname, Z, startype):
+def make_inlist_inputs(runname, Z, vvcstr, startype):
     
+    vvcstr = str(vvcstr)
+
     #Array of all masses
     massgrid = lambda i,f,step: np.linspace(i,f,round(((f-i)/step))+1.0)
 
-    bigmassgrid = np.unique(np.hstack((massgrid(0.3, 1.0, 0.05), massgrid(1.0, 2.0, 0.04), massgrid(2.0, 8.0, 0.2)) ))  #massgrid(0.1,0.3,0.05),\
+    bigmassgrid = np.unique(np.hstack((massgrid(0.1, 1.0, 0.05), massgrid(1.0, 2.0, 0.04), massgrid(2.0, 8.0, 0.2)) ))  #massgrid(0.1,0.3,0.05),\
                                            # massgrid(0.3,0.4,0.01), massgrid(0.4,0.9,0.05),\
                                            # massgrid(0.92,2.8,0.02), massgrid(3.0,8.0,0.2),\
                                            # massgrid(9,20,1), massgrid(20,40,2), massgrid(40,150,5),\
@@ -71,6 +73,9 @@ def make_inlist_inputs(runname, Z, startype):
     #Create mass lists
     mapfunc = lambda var: np.str(int(var)) if var == int(var) else np.str(var)
     masslist = map(mapfunc, bigmassgrid[massindex])
+
+    # Create vvc list:
+    vvclist = list([vvcstr]*np.size(massindex))
         
     #Create BC lists, but LowDiffBC & HighDiffBC are special cases
     if ('Diff' in startype):
@@ -91,6 +96,7 @@ def make_inlist_inputs(runname, Z, startype):
     #Make list of [replacement string, values]
     replist = [\
             ["<<MASS>>", masslist],\
+            ["<<VVC>>", vvclist],\
             ["<<BC_LABEL>>", bclabellist],\
             ["<<BC_TABLE>>", bctablelist],\
             ["<<H1>>", H1list],\
@@ -104,6 +110,7 @@ def make_inlist_inputs(runname, Z, startype):
     if ('Diff' in startype):
         replist = [\
                 ["<<MASS>>", masslist*2],\
+                ["<<VVC>>", vvclist*2],\
                 ["<<BC_LABEL>>", bclabellist],\
                 ["<<BC_TABLE>>", bctablelist],\
                 ["<<H1>>", H1list*2],\

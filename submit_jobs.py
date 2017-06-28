@@ -7,10 +7,11 @@ Calls all of the necessary routines to submit a grid of specified name and metal
 Args:
     runname: the name of the grid
     Z: the mass fraction in metals
+    vvcstr: the critical rotation ratio (omega over omega crit)
     
 Example:
-    To run a Z=0.015 grid called MIST_v0.1
-    >>> ./submit_jobs MIST_v0.1 0.015
+    To run a Z=0.015, vvc=0.4 grid called MIST_v0.1
+    >>> ./submit_jobs MIST_v0.1 0.015 0.4
 
 """
 
@@ -28,6 +29,8 @@ if __name__ == "__main__":
     #Digest the inputs
     runname = sys.argv[1]
     FeH = sys.argv[2]
+    vvcstr = sys.argv[3]
+
     Z = calc_xyz.calc_xyz(float(FeH),input_feh=True)[-1]
     dirname = os.path.join(os.environ['MIST_GRID_DIR'], runname)
     

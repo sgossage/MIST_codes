@@ -67,21 +67,21 @@ if __name__ == "__main__":
     print "************************************************************"
     print "**********************MAKE ISOCHRONES***********************"
     print "************************************************************"
-    make_eeps_isos.make_eeps_isos(runname, basic=True)
+    #make_eeps_isos.make_eeps_isos(runname, basic=True)
     make_eeps_isos.make_eeps_isos(runname, basic=False)
     
-    print "************************************************************"
-    print "******************PLOTTING THE EEPS FILES*******************"
-    print "************************************************************"
-    os.mkdir(os.path.join(newdirname, "plots"))
-    mesa_plot_grid.plot_HRD(runname)
-    mesa_plot_grid.plot_combine(runname, iso=False, remove_pdf=False)
+    #print "************************************************************"
+    #print "******************PLOTTING THE EEPS FILES*******************"
+    #print "************************************************************"
+    #os.mkdir(os.path.join(newdirname, "plots"))
+    #mesa_plot_grid.plot_HRD(runname)
+    #mesa_plot_grid.plot_combine(runname, iso=False, remove_pdf=False)
 
-    print "************************************************************"
-    print "******************PLOTTING THE ISOCHRONES*******************"
-    print "************************************************************"
-    mesa_plot_grid.plot_iso(runname)
-    mesa_plot_grid.plot_combine(runname, iso=True, remove_pdf=False)
+    #print "************************************************************"
+    #print "******************PLOTTING THE ISOCHRONES*******************"
+    #print "************************************************************"
+    #mesa_plot_grid.plot_iso(runname)
+    #mesa_plot_grid.plot_combine(runname, iso=True, remove_pdf=False)
     
     print "************************************************************"
     print "******COMPRESSING BOTH TRACKS AND REDUCED DIRECTORIES*******"
@@ -100,7 +100,10 @@ if __name__ == "__main__":
     print "************************************************************"
     os.system("rm -rf " + runname)
     os.system("rm -rf " + runname + '_tracks')
+    print('Moving {:s} to {:s}...'.format(rawdirname, os.path.join(os.environ['STORE_DIR'], runname.split('/')[0])))
     os.system("mv " + rawdirname + " " + os.path.join(os.environ['STORE_DIR'], runname.split('/')[0]))
+    print('Moving {:s} to {:s}...'.format('_'.join(runname.split('/')) + ".tar.gz ", os.path.join(os.environ['STORE_DIR'], runname.split('/')[0])))
     os.system("mv " + '_'.join(runname.split('/')) + ".tar.gz " + os.path.join(os.environ['STORE_DIR'], runname.split('/')[0]))
+    print('Moving {:s} to {:s}...'.format('_'.join(runname.split('/')) + "_tracks.tar.gz ", os.path.join(os.environ['STORE_DIR'], runname.split('/')[0])))
     os.system("mv " + '_'.join(runname.split('/')) + "_tracks.tar.gz " + os.path.join(os.environ['STORE_DIR'], runname.split('/')[0]))
 
