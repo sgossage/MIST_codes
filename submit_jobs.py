@@ -44,15 +44,15 @@ if __name__ == "__main__":
     #Generate inlists using template inlist files
     tempstor_inlist_dir = os.path.join(os.environ['MESAWORK_DIR'], 'inlists/inlists_'+'_'.join(runname.split('/')))
     new_inlist_name = '<<MASS>>M<<BC_LABEL>>.inlist'
-    make_replacements.make_replacements(make_inlist_inputs.make_inlist_inputs(runname, Z, 'VeryLow'), new_inlist_name,\
+    make_replacements.make_replacements(make_inlist_inputs.make_inlist_inputs(runname, Z, vvcstr, 'VeryLow'), new_inlist_name,\
         direc=tempstor_inlist_dir, file_base=os.path.join(os.environ['MIST_CODE_DIR'],'mesafiles/inlist_lowinter'), clear_direc=True)
-    make_replacements.make_replacements(make_inlist_inputs.make_inlist_inputs(runname, Z, 'LowDiffBC'), new_inlist_name,\
+    make_replacements.make_replacements(make_inlist_inputs.make_inlist_inputs(runname, Z, vvcstr, 'LowDiffBC'), new_inlist_name,\
         direc=tempstor_inlist_dir, file_base=os.path.join(os.environ['MIST_CODE_DIR'],'mesafiles/inlist_lowinter'))
-    make_replacements.make_replacements(make_inlist_inputs.make_inlist_inputs(runname, Z, 'Intermediate'), new_inlist_name,\
+    make_replacements.make_replacements(make_inlist_inputs.make_inlist_inputs(runname, Z, vvcstr, 'Intermediate'), new_inlist_name,\
         direc=tempstor_inlist_dir, file_base=os.path.join(os.environ['MIST_CODE_DIR'],'mesafiles/inlist_lowinter'))
-    make_replacements.make_replacements(make_inlist_inputs.make_inlist_inputs(runname, Z, 'HighDiffBC'), new_inlist_name,\
+    make_replacements.make_replacements(make_inlist_inputs.make_inlist_inputs(runname, Z, vvcstr, 'HighDiffBC'), new_inlist_name,\
         direc=tempstor_inlist_dir, file_base=os.path.join(os.environ['MIST_CODE_DIR'],'mesafiles/inlist_high'))
-    make_replacements.make_replacements(make_inlist_inputs.make_inlist_inputs(runname, Z, 'VeryHigh'), new_inlist_name,\
+    make_replacements.make_replacements(make_inlist_inputs.make_inlist_inputs(runname, Z, vvcstr, 'VeryHigh'), new_inlist_name,\
         direc=tempstor_inlist_dir, file_base=os.path.join(os.environ['MIST_CODE_DIR'],'mesafiles/inlist_high'))
         
     inlist_list = os.listdir(tempstor_inlist_dir)
