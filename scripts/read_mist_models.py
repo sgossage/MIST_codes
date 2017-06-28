@@ -7,6 +7,11 @@ mpl.use('Agg')
 import os
 import glob
 import seaborn
+# no seaborn gridlines on plot, and white bg:
+sns.set_context('paper')
+sns.set(font='serif')
+sns.set_style("white", {'font.family' : 'serif', 'font.serif': ['Times', 'Palatino', 'serif']})
+plt.axes(frameon=False)
 
 from MIST_codes.scripts.fileio import *
 
@@ -209,10 +214,10 @@ class ISOCMD:
         
         """
 
-        Returns the index for the user-specified age.
+        Returns the index for the user-specified log10 age.
         
         Args:
-            age: the age of the isochrone.
+            age: the log10 age of the isochrone.
         
         """
         
