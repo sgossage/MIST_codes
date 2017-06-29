@@ -50,7 +50,7 @@ def checkruns(runname_str, out_sacct=True):
             jobids = ','.join(jobids)
             print(subprocess.check_output(['sacct', '--jobs={:s}'.format(jobids), '--format=JobID,JobName,Partition,AllocCPUS,State,ExitCode,MaxRSS,Elapsed']))
 
-        print("{:s} had {:d} tracks with fatal errors.".format(rundir, len(failed_massdirs)))
+        print("{:s} had {:d} tracks with fatal errors.".format(targetdir_of(rundir), len(failed_massdirs)))
         for failed_massdir in failed_massdirs:
             print("{:.2f} Msol will be resubmitted.".format(massof(failed_massdir.split('/')[-1])))
 
