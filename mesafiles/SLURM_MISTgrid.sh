@@ -1,10 +1,10 @@
 #!/bin/bash
 
-#SBATCH -n 8
+#SBATCH -n <<CORES>>
 #SBATCH -N 1
 #SBATCH -t <<RUNTIME>>
 #SBATCH --mem 8000
-#SBATCH -p conroy
+#SBATCH -p <<PARTITION>>
 #SBATCH -o <<RUNNAME>>.o
 #SBATCH -e <<RUNNAME>>.e
 

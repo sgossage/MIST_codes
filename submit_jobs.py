@@ -31,6 +31,13 @@ if __name__ == "__main__":
     FeH = sys.argv[2]
     vvcstr = sys.argv[3]
 
+    # optional third argument for Odyssey partition specification.
+    try:
+        partition = sys.argv[4]
+    except IndexError:
+        # If partition is unspecified, use default as conroy.
+        partition = "conroy"
+
     Z = calc_xyz.calc_xyz(float(FeH),input_feh=True)[-1]
     dirname = os.path.join(os.environ['MIST_GRID_DIR'], runname)
     
@@ -78,7 +85,12 @@ if __name__ == "__main__":
 
         #Create and move the SLURM file to the correct directory
         runbasefile = os.path.join(os.environ['MIST_CODE_DIR'], 'mesafiles/SLURM_MISTgrid.sh')
-        slurmfile = make_slurm_sh.make_slurm_sh(inlistname, pathtoinlistdir, runbasefile)
+        slurmfile = make_slurm_sh.make_slurm_sh(inlistname, pathtoinlistdir, runbasefile, partition)
+
+        if not slurmfile:
+            print("Generation of SLURM file failed, exiting.")
+            sys.exit(0)
+
         shutil.move(slurmfile, pathtoinlistdir)
         
         #cd into the individual directory and submit the job
