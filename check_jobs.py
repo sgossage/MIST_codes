@@ -3,8 +3,9 @@
 from glob import glob
 import os
 import sys
+import subprocess
 
-def checkruns(runname_str):
+def checkruns(runname_str, out_sacct=True):
 
     rundirs = glob(runname_str)
 
@@ -12,6 +13,7 @@ def checkruns(runname_str):
 
     for rundir in rundirs:
         failed_massdirs = []
+        jobids = []
         trackdirs = glob(os.path.join(rundir, '*M_dir'))
         for trackdir in trackdirs:
             # Checks for 'Fatal Error' string in the SLURM *.e file of the run's tracks:
@@ -26,14 +28,35 @@ def checkruns(runname_str):
                 for line in errlines:
                     if 'Fatal Error' in line:
                         print("{:s} encountered a fatal error.".format(trackdir))
-                        #failed_masses.append(massof(trackdir.split('/')[-1]))
                         failed_massdirs.append(trackdir)
+
+            if out_sacct:
+                # .o file is used to gather the SLURM job id; used to check job status.
+                try:
+                    outfile = glob(os.path.join(trackdir, '*.o'))[0]
+                except IndexError:
+                    print("{:s} is missing a SLURM .o (i.e., output) file.".format(trackdir))
+                    continue
+
+                with open(outfile, 'r') as of:
+                    outlines = of.readlines()
+                    for line in outlines:
+                        if 'SLURM JOB ID:' in line:
+                            jobids.append(line.split()[-1])
+                            break
+
+        if out_sacct:
+            # Display sacct info for run's jobs:
+            jobids = ','.join(jobids)
+            print(subprocess.check_output(['sacct', '--jobs={:s}'.format(jobids), '--format=JobID,JobName,Partition,AllocCPUS,State,ExitCode,MaxRSS,Elapsed']))
+
         print("{:s} had {:d} tracks with fatal errors.".format(rundir, len(failed_massdirs)))
         for failed_massdir in failed_massdirs:
             print("{:.2f} Msol will be resubmitted.".format(massof(failed_massdir.split('/')[-1])))
 
         # dictionary has the run directories as keys and its failed track subdirs as a list for the items.
         failed_dict[rundir] = failed_massdirs
+        print("===========================================================")
 
     return failed_dict
 
