@@ -20,7 +20,7 @@ Example:
 
 import numpy as np
 
-def calc_xyz(znew, feh=False):
+def calc_xyz(znew, input_feh=False):
     
     #Specify solar abundaces, protosolar from Asplund+2009
     solar_h1 = 0.7154
@@ -33,7 +33,7 @@ def calc_xyz(znew, feh=False):
     solar_z = 1.0-solar_x-solar_y
     
     #Input is either Z or [Fe/H]
-    if feh == True:
+    if input_feh == True:
         znew = 10**(znew)*solar_z
     
     #Primordial He abundance and assume linear enrichment to today's solar Y
