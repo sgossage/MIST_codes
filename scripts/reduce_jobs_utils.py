@@ -21,10 +21,30 @@ def gen_summary(rawdirname):
 
     """
     
-    #Outputs from the cluster
-    listerrfiles = glob.glob(os.path.join(os.environ['MIST_GRID_DIR'], rawdirname) + '/*/*.e')
-    listoutfiles = glob.glob(os.path.join(os.environ['MIST_GRID_DIR'], rawdirname) + '/*/*.o')
-    
+    #Outputs from the cluster; modified to look for re.o and re.e files from resumed runs first.
+    # Idea is that the resumed runs would have the most relevant status desired for the summary file.
+    trackdirs = glob.glob(os.path.join(os.environ['MIST_GRID_DIR'], rawdirname) + '/*')
+    listerrfiles = []
+    listoutfiles = []
+    #listerrfiles = glob.glob(os.path.join(os.environ['MIST_GRID_DIR'], rawdirname) + '/*/*.e')
+    #listoutfiles = glob.glob(os.path.join(os.environ['MIST_GRID_DIR'], rawdirname) + '/*/*.o')
+    for trackdir in trackdirs:
+        try:
+            # try to get the .e file for a resumed run if possible.
+            listerrfiles.append(glob.glob(os.path.join(trackdir, '*re.e'))[0])
+        except IndexError:
+            # no *re.e file found.
+            listerrfiles.append(glob.glob(os.path.join(trackdir, '*.e'))[0])
+        try:
+            # try to get the .o file for a resumed run if possible.
+            listoutfiles.append(glob.glob(os.path.join(trackdir, '*re.o'))[0])
+        except IndexError:
+            # no *re.o file found.
+            listoutfiles.append(glob.glob(os.path.join(trackdir, '*.o'))[0])
+            
+                
+
+
     #Dictionary to store the information about the MESA run
     stat_summary = {}
 

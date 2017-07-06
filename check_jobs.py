@@ -91,7 +91,7 @@ def getphotos(runname_str, TPextend=True):
                 outlines = of.readlines()
                 for i, line in enumerate(outlines):
                     if 'save photos/x' in line:
-                        if TPextend == True & ('termination code: HB_limit' in outlines[i+1]):
+                        if TPextend == True & ('termination code: HB_limit' in outlines[i+1]) & ( not glob(os.path.join(trackdir, '*re.*'))):
                             # check if extension to TP is necc.
                             lastphoto = line.split('photos/')[-1].split(' ')[0]
                             #photos.append((target_of(trackdir), lastphoto))
@@ -105,8 +105,8 @@ def getphotos(runname_str, TPextend=True):
                                 # only need first 11 lines of runscript.
                                 with open(runscript_path, 'r') as runscript:
                                     scriptlines = runscript.readlines()[:12]
-                                    scriptlines[7] = '#SBATCH -o 00100Mre.o\n'
-                                    scriptlines[8] = '#SBATCH -e 00100Mre.e\n'
+                                    scriptlines[7] = '#SBATCH -o {:s}\n'.format(target_of(outfile).replace('.o', 're.o'))
+                                    scriptlines[8] = '#SBATCH -e {:s}\n'.format(target_of(outfile).replace('.o', 're.e'))
                                 # In 'resume' script, insert command to resume the run using the last photo:
                                 scriptlines.append('./re {:s}\n'.format(lastphoto))
                                 resscript.writelines(scriptlines)
@@ -224,7 +224,7 @@ if __name__ == '__main__':
             for failed_massdir in failed_massdirs:
                 os.chdir(failed_massdir)
                 print("re-submitting {:s}...".format(target_of(failed_massdir)))
-                slurmfile = glob(os.path.join(failed_massdir, '*M_run.sh'))[0]
+                slurmfile = glob(os.path.join(failed_massdir, '*M*run.sh'))[0]
                 print(slurmfile)
                 #os.system("sbatch " + slurmfile)
                 os.chdir(os.environ['MIST_CODE_DIR'])
@@ -242,7 +242,7 @@ if __name__ == '__main__':
             for resume_dir in resume_dirs:
                 os.chdir(resume_dir)
                 print("resuming {:s}...".format(target_of(resume_dir)))
-                slurmfile = glob(os.path.join(resume_dir, '*M_resume.sh'))[0]
+                slurmfile = glob(os.path.join(resume_dir, '*M*resume.sh'))[0]
                 #print(slurmfile)
                 os.system("sbatch "+slurmfile)
                 os.chdir(os.environ['MIST_CODE_DIR'])
