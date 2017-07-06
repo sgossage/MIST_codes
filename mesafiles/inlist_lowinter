@@ -74,13 +74,15 @@
 !WHEN TO STOP
 
       !in run_star_extras, it's set to H1 depletion in the core for low mass stars
-      !gamma_center_limit = 20.0
+      gamma_center_limit = 20.0
 
       ! For detecting horizontal branch. Only applies when center abundance by mass
       ! of h1 is < 1d-4. Stop when the center abundance by mass of he4 drops below 
       ! this limit.
 
-      HB_limit = 0.5
+      !HB_limit = 0.5
+
+      stop_at_TP = .true.
             
 !PHYSICS
 
