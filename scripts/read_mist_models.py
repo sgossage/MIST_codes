@@ -151,7 +151,7 @@ class ISOCMD:
             ages            List of ages.
             num_ages        Number of ages.
             hdr_list        List of column headers.
-            isocmds         Data.
+            isocmds         Data (data columns corresp. to column headers).
         
         """
 
@@ -448,7 +448,23 @@ class ISOCMD:
 
         return base_line, sc
 
-    def isoplot(self, ax, masses=None, xlim=[], ylim=[], shade=None, legloc='best', legsize=8, **kwargs):
+    def isoplot(self, ax, masses=None, xlim=[], ylim=[], shade=None, legloc='best', label=False, legsize=8, **kwargs):
+
+        """
+            Plots CMD of a MIST isochrone object.
+
+            Args:
+            -----
+                + ax: Matplotlib.pyplot axes object -- pass an axes and the plot goes on it.
+                + masses: Optionally specify masses to mark on the isochrone plot.
+                + xlim: Give a list of two numbers to specify x axis limits.
+                + ylim: Same as xlim but for y axis.
+                + shade: A number between 0 and 1 to choose a line color -- goes through some cmap used by 'lc' below.
+                + legloc: legend location -- uses matplotlib legend() method keywords.
+                + legsize: Size of the legend.
+                + **kwargs: any keyword arguments for matplotlib.pyplot.plot() to be used when plotting the isochrone.
+        """
+
         # Plot a CMD of red vs. blue - red:
         if  shade > 1.0 or shade < 0.0:
             shade = 0.0
@@ -457,7 +473,9 @@ class ISOCMD:
             lc = plt.cm.Dark2(shade)
             kwargs['c'] = lc
 
-        kwargs['label'] = self.lbl
+        if label == True:
+            kwargs['label'] = self.lbl
+
         kwargs['lw'] = 1
 
         base_line, = ax.plot(self.x, self.y, **kwargs)
@@ -495,11 +513,10 @@ class ISOCMD:
         ax.set_ylim(self.yextent)
         ax.set_title(u'MIST Isochrones: ${:s}$ vs. ${:s}$'.format(self.y_name, self.x_name))
 
-        legend = ax.legend(loc=legloc, prop={'size':legsize}, frameon=True)
-        frame = legend.get_frame()
-        frame.set_facecolor('white')
+        if legloc != None:
+           legend = ax.legend(loc=legloc, prop={'size':legsize}, frameon=True)
 
-        return
+        return ax, self.x, self.y
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -563,6 +580,10 @@ class EEP:
             # rewrite the luminosity and effective temp according to grav. darkening:
             self.filename = rw_gdeep(self, self.filename, gravdark_i)
             self.version, self.abun, self.rot, self.minit, self.hdr_list, self.eeps = self.read_eep_file()
+
+        self.gravdark_i = gravdark_i
+
+        self.lbl = r'MIST: M = {:.2f}'.format(self.minit)+r' $M_{\odot}$, '+r'$\Omega/\Omega_c$'+' = {:.1f}, i = {:.2f} deg'.format(self.rot, self.gravdark_i)
 
     
     def get_fn(self, feh, vvcrit, mass, exttag):
@@ -642,8 +663,8 @@ class EEP:
         ages = self.get_masked(['star_age'], phasemask=phasemask)[0]
         return ages[-1] - ages[0]
         		
-    def plot_HR(self, fignum=0, phases=[], phasecolor=[], phasemask = [], ax = None, cbar_valname = None,
-                xlim = [], ylim = [], agemarks = None, legloc = None, showplt = False, savename = None, **kwargs):
+    def plot_HR(self, fignum=0, phases=[], phasecolor=[], phasemask = [], ax = None, shade = None, cbar_valname = None, masslbl=True,
+                vvclbl=False, xlim = [], ylim = [], agemarks = None, legloc = None, label=False, showplt = False, savename = None, **kwargs):
         
         """
 
@@ -667,6 +688,9 @@ class EEP:
             >> eep.plot_HR(cbar_valname='surf_avg_omega_div_omega_crit') # Color lines by omega/omega_crit.
         
         """
+
+        self.phasemask = phasemask
+
         hdr_names = ['log_Teff', 'log_L']
         if cbar_valname is not None:
             hdr_names.append(cbar_valname)
@@ -698,9 +722,11 @@ class EEP:
             fig = plt.figure(fignum)        
             ax = fig.add_subplot(111)
 
-        ax.set_xlabel(u'log(T_{eff} [K]')
-        ax.set_ylabel(u'log(L/L_{\circdot})')
-
+        ax.set_xlabel(r'$log(T_{eff})$')
+        ax.set_ylabel(r'$log(L/L_{\odot})$')
+    
+        if label == True:
+            kwargs['label'] = self.lbl
 
         # If supplied, create a color the lines by a third value:
         if isinstance(cbar_valname, str):
@@ -738,48 +764,13 @@ class EEP:
                         fin_phase_age = self.eeps['star_age'][p_ind][-1]
                         phase_deltaT = fin_phase_age - init_phase_age
                         #ax.text(x[p_ind][-1], y[p_ind][-1], r'{:s} $\delta$t = {:.2e}'.format(phase_names[phase], phase_deltaT), fontsize=3)
-        
-        # Code responsible for making marks on the track and coloring it:
-        #--------------------------------------------------------------------------------------
-        # for placement on first loop if masking SGB+ (phase label 2):
-        if 2 in phasemask and False:
-            past_growth1 = False
-            for idx in range(len(x)):
-                if idx > 10:
-                    if y[idx] < y[idx - 1]:
-                        # starting 1st decay:
-                        past_growth1 = True
-                    else:
-                        continue
 
-                if past_growth1:
-                    # if growing again:
-                    if y[idx] > y[idx - 1]:
-                        loop1_idx = idx
-                        break
-                    else:
-                        continue
-            ax.scatter(x[idx], y[idx], marker='+')
-            #txtx = x[loop1_idx]
-            #txty = y[loop1_idx]
-            #xfac = 1.003
-            #yfac = 0.997
+        self.x = x
+        self.y = y
 
-        # or else label at the bluest point.
-        else:
-            txtx = x[np.where(x == x.max())]
-            xfac = 1.02
-            txty = y[np.where(x == x.max())]
-            yfac = 0.997
-
-        # Label v/vcrit of the track:
-        #ax.scatter(txtx, txty*yfac, marker = 'x', s=4, label=r'$\frac{\Omega}{\Omega_{crit}} = $' + "{:.1f}".format(self.rot),
-        #                c = [0.4+self.rot, 0, 0.6-self.rot], lw= 0.8, zorder = 9999)  
-
-        # Label the mass of the track:
-        #if self.minit not in plotted_masses:
-        #    ax.text(txtx*xfac, txty*yfac, "{:.2f} ".format(self.minit) + r'$M_{\odot}$', fontsize = 3.5)        
-
+        # mark the tracks if desired:
+        if masslbl or vvclbl:
+            self.mark_track(ax, masslbl=masslbl, vvclbl=vvclbl)
         #plotted_masses.append(self.minit)
      
         # marking age points on track:
@@ -819,12 +810,30 @@ class EEP:
         if len(xlim) == 2:
             ax.set_xlim(xlim)
         else:
-            ax.set_xlim([1.01*x.max(), 0.99*x.min()])
+            xlims = np.array(ax.get_xlim())
+            if x.max() > xlims.max():
+                xmax = x.max()
+            else:
+                xmax = xlims.max()
+            if x.min() < xlims.min():
+                xmin = x.min()
+            else:
+                xmin = xlims.min()
+            ax.set_xlim([1.01*xmax, 0.99*xmin])
 
         if len(ylim) == 2:
             ax.set_ylim(ylim)
         else:
-            ax.set_ylim([0.99*y.min(), 1.01*y.max()])
+            ylims = np.array(ax.get_ylim())
+            if y.max() > ylims.max():
+                ymax = y.max()
+            else:
+                ymax = ylims.max()
+            if y.min() < ylims.min():
+                ymin = y.min()
+            else:
+                ymin = ylims.min()            
+            ax.set_ylim([0.99*ymin, 1.01*ymax])
 
     #    if isinstance(cbar_valname, str):
     #       cbar = plt.colorbar(lc, ax=ax)
@@ -845,6 +854,56 @@ class EEP:
             return ax, lc, x, y
         else:
             return ax, x, y
+
+    def mark_track(self, ax, masslbl=True, vvclbl=False):
+        # Code responsible for making marks on the track and coloring it:
+        #--------------------------------------------------------------------------------------
+        # for placement on first loop if masking SGB+ (phase label 2):
+        x = self.x
+        y = self.y
+        phasemask = self.phasemask
+ 
+        if 2 in phasemask and False:
+            past_growth1 = False
+            for idx in range(len(x)):
+                if idx > 10:
+                    if y[idx] < y[idx - 1]:
+                        # starting 1st decay:
+                        past_growth1 = True
+                    else:
+                        continue
+
+                if past_growth1:
+                    # if growing again:
+                    if y[idx] > y[idx - 1]:
+                        loop1_idx = idx
+                        break
+                    else:
+                        continue
+            ax.scatter(x[idx], y[idx], marker='+')
+            txtx = x[loop1_idx]
+            txty = y[loop1_idx]
+            xfac = 1.003
+            yfac = 0.997
+
+        # or else label at the bluest point.
+        else:
+            txtx = x[np.where(x == x.max())]
+            xfac = 1.003
+            txty = y[np.where(x == x.max())]
+            yfac = 0.997
+
+        # Label v/vcrit of the track:
+        if vvclbl:
+            ax.scatter(txtx, txty*yfac, marker = 'x', s=4, label=r'$\frac{\Omega}{\Omega_{crit}} = $' + "{:.1f}".format(self.rot),
+                        c = [0.4+self.rot, 0, 0.6-self.rot], lw= 0.8, zorder = 9999)  
+
+        # Label the mass of the track:
+        #if self.minit not in plotted_masses:
+        if masslbl:
+            ax.text(txtx*xfac, txty*yfac, "{:.2f} ".format(self.minit) + r'$M_{\odot}$', fontsize = 10)
+
+        return
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -975,12 +1034,16 @@ class EEPCMD:
 
 def color_lineby_z(x, y, z, zmin, zmax, ax, alpha=1.0):
         
+    """
+        See http://matplotlib.org/examples/pylab_examples/multicolored_line.html as the source.
+    """
+
     points = np.array([x, y]).T.reshape(-1, 1, 2)
     segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-    lc = LineCollection(segments, cmap=plt.get_cmap('jet'))
+    lc = LineCollection(segments, cmap=plt.get_cmap('jet'), norm=plt.Normalize(zmin, zmax))
     lc.set_array(z)
-    lc.set_clim(vmin=0.0,vmax=1.0)
+    #lc.set_clim(vmin=0.0,vmax=1.0)
     lc.set_alpha(alpha)
 
     ax.add_collection(lc)
