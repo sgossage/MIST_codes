@@ -5,10 +5,74 @@ import matplotlib.pyplot as plt
 
 import isointerp
 import createcmd as ccmd
+import isomist
 from gdiso import *
 
+def get_fn(feh, vvcrit, mode, mass=0.0, ebv = 0.0, gravdark_i = 0.0, exttag=None):
+    """
+        Gets the filename, given a [Fe/H] value & a v/vcrit value. Assumes that the environment variable 'STORE_DIR' is set
+        and that the grid names follow feh_pX.XX_afe_0.0_vvcritX.X for their name format.
 
-def get_isocmdf(grid_dir, feh, vvcrit, Av = 0.0, gravdark_i=0.0, exttag=None):
+        Args:
+            feh: the [Fe/H] of the desired grid from which the cmd filename will be taken.
+            vvcrit: same as above, but for v/vcrit
+            mode: a string -- either 'iso' for .iso files or 'eep' for .track.eep files.
+            ebv: E(B-V) desired for the .cmd file.
+            gravdark_i: inclination angle for gravity darkening; default is 0.0 angles, i.e. looking @ the equator of the stars.
+            exttag: any tags to append to the end of the grid; e.g. if feh_pX.XX_afe_0.0_vvcritX.X_HB was desired, this would be 'HB'
+                    (a str, & '_' is added by this code itself).
+    """
+
+    store_dir =  os.path.join(os.environ['STORE_DIR'], 'MIST_v1.0', 'output')
+    if feh < 0.0:
+        fehstr = 'm{:.2f}'.format(abs(feh))
+    else:
+        fehstr = 'p{:.2f}'.format(feh)
+
+    rotstr = '{:.1f}'.format(vvcrit)
+
+    # Getting the track's file name:
+    if exttag == None:
+        gridname = 'feh_{:s}_afe_p0.0_vvcrit{:s}'.format(fehstr, rotstr)
+    else:
+        gridname = 'feh_{:s}_afe_p0.0_vvcrit{:s}_{:s}'.format(fehstr, rotstr, exttag)
+
+    grid_dir = os.path.join(store_dir, gridname)
+
+    if mode == 'iso' or mode == 'isocmd':
+        # Av extinction value
+        Av = 3.1*ebv
+
+        if mode == 'iso':
+            isof = get_isocmdf(grid_dir, feh, vvcrit, Av = Av, gravdark_i = gravdark_i, exttag = exttag, create_cmd = False)
+            #assert len(isof) == 1, "Got {:d}, rather than one .cmd file in {:s}.".format(len(isof), grid_dir)
+            return isof
+        elif mode == 'isocmd':
+            # get the .iso.cmd file name:
+            cmdf = get_isocmdf(grid_dir, feh, vvcrit, Av = Av, gravdark_i = gravdark_i, exttag = exttag, create_cmd = True)
+            # in case more than one .cmd file is returned -- should never happen since filenames are unique; indicates
+            # something may be wrong with file seaerch terms.
+            #assert len(cmdf) == 1, "Got {:d}, rather than one .cmd file in {:s}.".format(len(cmdf), grid_dir)
+            return cmdf
+
+
+    if mode == 'eep':
+
+        eepf = get_masstrackeepf(grid_dir, mass)
+        # Trying to get the track.eep for a given mass value. Print masses found on failure:
+        if not eepf:
+            # if a track.eep file was not able to be retrieved (due to unavailable mass?), list the available masses here:
+            filelist = glob.glob(os.path.join(grid_dir, 'eeps/*M.track.eep'))
+            print('Valid masses found:\n')
+            masslist = []
+            for f in filelist:
+                starmass = float(f.split('eeps/')[1].split('M')[0])/100.0
+                masslist.append(starmass)
+            return sorted(masslist)
+        # or if successful the recovered .track.eep file name will be returned.
+        return eepf
+
+def get_isocmdf(grid_dir, feh, vvcrit, Av = 0.0, gravdark_i=0.0, exttag=None, create_cmd=True):
 
     """
         Gets the .iso.cmd file for the fiven feh and v/vcrit values. If the file DNE, tjos wo;; attempt to 
@@ -21,131 +85,37 @@ def get_isocmdf(grid_dir, feh, vvcrit, Av = 0.0, gravdark_i=0.0, exttag=None):
 
         # The .cmd file may still need to be created.
         if exttag == None:
+            # checks for basic.iso first:
             isofile = glob.glob(os.path.join(grid_dir, 'isochrones/*basic.iso'))
             if len(isofile) == 0:
                 isofile = glob.glob(os.path.join(grid_dir, 'isochrones/*full.iso'))
-            isofile = isofile[0]
+
+            assert len(isofile) == 1, "Got {:d}, rather than one .iso file in {:s}.".format(len(isofile), grid_dir)
+            filename = isofile[0]
         else:
             isofile = glob.glob(os.path.join(grid_dir, 'isochrones/*{:s}_basic.iso'.format(exttag)))
             if len(isofile) == 0:
                 isofile = glob.glob(os.path.join(grid_dir, 'isochrones/*full.iso'))
-            isofile = isofile[0]
-    
-        # Call Aaron's orientation code to recompute Teff and L & create a GDed .cmd
-        print(isofile)
+
+            assert len(isofile) == 1, "Got {:d}, rather than one .iso file in {:s}.".format(len(isofile), grid_dir)
+            filename = isofile[0]
+
         print('-----')
-        filelist = ccmd.createcmd(fname = isofile, Av = Av, gravdark_i = gravdark_i)
-                
-        return filelist
+        if create_cmd:
+            cmdfile = isomist.createcmd(filename, Av = Av, gravdark_i = gravdark_i)
+            filename = cmdfile
+
+        return filename
 
     else:
         # If non-existent in the default grid, attempt interpolation.
-        interp_isof = isointerp.call_isointerp(vvcrit, feh)
-        filelist = ccmd.createcmd(fname = interp_isof, Av = Av, gravdark_i = gravdark_i)
-        return filelist
+        interpiso_fn = isointerp.call_isointerp(vvcrit, feh)
+        filename = interpiso_fn
+        if create_cmd:
+            cmdfile = isomist.createcmd(interpiso_fn, Av = Av, gravdark_i = gravdark_i)
+            filename = cmdfile
 
-
-def plot_photof(fname, erron= False, ax=None):
-
-    """
-        Plots the magnitudes stored in a MATCH .phot file. This is no a special file, aside from the format of no header,
-    and only two columns. Column 1 = bluer magniudes, column 2 = redder magnitudes; this function extracts the magnitudes
-    and plots them on a CMD of red vs. blue - red.
-    """
-
-    if not ax:
-        ax = plt.gca()
-
-    V = np.genfromtxt(fname, usecols = (0, ))
-    I = np.genfromtxt(fname, usecols = (1, ))
-    colors = V - I
-    x = colors
-    y = V
-
-    ax.scatter(x, y, c='b', label="{:s}".format(fname.split('/')[-1].split('.phot')[0]), s = 2,  alpha = 0.6, zorder = 9999)
-
-    if erron:
-        errfile = fname.split('.phot')[0] + '.err'
-
-        if os.path.isfile(errfile):
-
-            verr = np.genfromtxt(errfile, usecols = (0, ))
-            ierr = np.genfromtxt(errfile, usecols = (1, ))
-            color_err = np.sqrt(verr**2 + ierr**2)
-            xerr = color_err
-            yerr = verr
-
-            ax.errorbar(x, y , xerr=xerr, yerr=yerr, fmt='o', marker=None, alpha = 0.4)
-
-    return ax
-
-def plot_geneva_iso(lage, vvcrit, pltmass, plot_index, color_n, ax):
-
-    """
-
-        Not very flexible code at the moment. Only works for Geneva models that I have downloaded and
-    these only exist at solar Z, lage = 8.2, and v/vcrit = 0.0, 0.6.
-
-    This expects a naming convention of:
-    
-        Isochrones_lage<val>_vvcrit<val>_solarZ.dat
-
-    for the Geneva isochrone file. This function extracts the log L and log Teff information and plots it.
-    I have these files store in my home directory in a folder called "Geneva" and these files are sought
-    from that location.
-
-    """
-
-    geneva_dir = '/n/conroyfs1/sgossage/Geneva'
-
-    geneva_isos = glob.glob(os.path.join(geneva_dir, '*.dat'))
-    #print(geneva_isos)
-    for isoname in geneva_isos:
-        isoname = isoname.split('/')[-1]
-        if "lage{:.2f}".format(lage) in isoname and "vvcrit{:.1f}".format(vvcrit) in isoname:
-            # If the isochrone exists, plot it. Right now only does log L and log Teff,
-            # but maybe also do filters...some are available in the Geneva isochrone file,
-            # although it will need to match the MIST isochrone file's filter set.
-            logL = np.genfromtxt(os.path.join(geneva_dir, isoname),
-                          usecols = (4,), skip_header = 2)
-
-            logTeff = np.genfromtxt(os.path.join(geneva_dir, isoname),
-                            usecols = (5,), skip_header = 2)
-
-            init_masses = np.genfromtxt(os.path.join(geneva_dir, isoname),
-                            usecols = (0,), skip_header = 2)
-
-            x = logTeff
-            y = logL
-
-            linecolor = plt.cm.rainbow(color_n[plot_index])
-
-            base_line, = ax.plot(x, y, ls = '--', c = linecolor, label='Geneva: age = {:.2e}, [Fe/H] = 0.00, vvcrit = {:.1f}'.format(10**lage, vvcrit), 
-                                 alpha = 0.8, zorder=-9999)
-
-            print("Plotting {:s}".format(isoname))
-
-            # pltmass may be given as a list of floats in order to plot a specific mass.
-            if isinstance(pltmass, float):
-                # Need to get the appropriae index of the given mass....should search for closest mass.
-                diff_arr = abs(init_masses - pltmass)
-                m_i = np.where(diff_arr == np.min(diff_arr))[0][0]
-                print('Plotting mass {:.2f} Msun ({:.2f} Msun requested).'.format(init_masses[m_i], pltmass))
-                ax.scatter(x[m_i], y[m_i], lw=0.1, alpha=0.5, color = base_line.get_color(), zorder=2)
-                ax.text(x[m_i]*0.98, y[m_i], '{:.2f}'.format(init_masses[m_i]) + r' $M_{\odot}$', fontsize=4, color = base_line.get_color())
-
-            elif isinstance(pltmass, list):
-                for mass in pltmass:
-                    # Need to get the appropriae index of the given mass....should search for closest mass.
-                    diff_arr = abs(init_masses - mass)
-                    m_i = np.where(diff_arr == np.min(diff_arr))[0][0]
-                    print('Plotting mass {:.2f} Msun ({:.2f} Msun requested).'.format(init_masses[m_i], mass))
-                    ax.scatter(x[m_i], y[m_i], lw=0.1, alpha=0.5, color = base_line.get_color(), zorder=2)
-                    ax.text(x[m_i]*0.98, y[m_i], '{:.2f}'.format(init_masses[m_i]) + r' $M_{\odot}$', fontsize=4, color = base_line.get_color())
-
-            break 
-
-    return
+        return filename
 
 def get_masstrackeepf(grid_dir, mass):
 

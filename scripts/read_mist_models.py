@@ -10,10 +10,15 @@ import seaborn as sns
 # no seaborn gridlines on plot, and white bg:
 sns.set_context('paper')
 sns.set(font='serif')
-sns.set_style("white", {'font.family' : 'serif', 'font.serif': ['Times', 'Palatino', 'serif']})
+sns.set_style("ticks", {'font.family' : 'serif', 'font.serif': ['Times', 'Palatino', 'serif']})
 plt.axes(frameon=False)
 
 from MIST_codes.scripts.fileio import *
+from gdiso import *
+import read_geneva as rg
+import isomist
+
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -26,7 +31,7 @@ class ISO:
     
     """
     
-    def __init__(self, filename, verbose=True):
+    def __init__(self, feh = 0.00, vvcrit = 0.0, filename = None, gravdark_i = 0.0, exttag = None, verbose=True, read=True):
     
         """
         
@@ -51,12 +56,27 @@ class ISO:
             
         """
         
-        self.filename = filename
+        if filename != None:
+            self.filename = filename
+        else:
+            filename = get_fn(feh, vvcrit, mode='iso', gravdark_i = gravdark_i, exttag=exttag)
+            self.filename = filename
+
         if verbose:
             print('Reading in: ' + self.filename)
-            
+
         self.version, self.abun, self.rot, self.ages, self.num_ages, self.hdr_list, self.isos = self.read_iso_file()
-        
+        # Check if gravity darkening is desired:
+        if gravdark_i > 0.0:
+            print("Checking for gravity darkened .iso file...")
+            # Will check for GDed .iso file; creates one if nec.
+            filename = rw_gdiso(self, filename, gravdark_i)
+            # replace filename with the new GD file:
+            self.filename = filename
+            # read in the new gravity darkened data:
+            if read:
+                self.version, self.abun, self.rot, self.ages, self.num_ages, self.hdr_list, self.isos = self.read_iso_file()
+
     def read_iso_file(self):
 
         """
@@ -128,7 +148,7 @@ class ISOCMD:
     
     """
     
-    def __init__(self, feh, vvcrit, ebv=0.0, gravdark_i=0.0, exttag=None, filename=None, verbose=True):
+    def __init__(self, feh=0.00, vvcrit=0.0, ebv=0.0, gravdark_i=0.0, exttag=None, filename=None, verbose=True):
     
         """
         
@@ -148,14 +168,15 @@ class ISOCMD:
             abun            Dictionary containing Yinit, Zinit, [Fe/H], and [a/Fe] values.
             Av_extinction   Av for CCM89 extinction.
             rot             Rotation in units of surface v/v_crit.
-            ages            List of ages.
+            ages            List of unique log10 ages.
             num_ages        Number of ages.
             hdr_list        List of column headers.
             isocmds         Data (data columns corresp. to column headers).
         
         """
-
-        self.filename = self.get_fn(feh, vvcrit, ebv = ebv, gravdark_i = gravdark_i, exttag=exttag)
+        Av = 3.1*ebv
+        iso_filename = ISO(feh = feh, vvcrit = vvcrit, gravdark_i = gravdark_i, exttag = exttag, read=False).filename #get_fn(feh, vvcrit, mode='isocmd', ebv = ebv, gravdark_i = gravdark_i, exttag=exttag)
+        self.filename = isomist.createcmd(iso_filename, Av = Av, gravdark_i = gravdark_i)
         self.exttag = exttag
         self.feh = feh
         self.gdark_i = gravdark_i
@@ -215,6 +236,10 @@ class ISOCMD:
         """
 
         Returns the index for the user-specified log10 age.
+
+        usage:
+        
+            isocmd.age_index(8.00)
         
         Args:
             age: the log10 age of the isochrone.
@@ -228,46 +253,6 @@ class ISOCMD:
             print('The requested age is outside the range. Try between ' + str(min(self.ages)) + ' and ' + str(max(self.ages)))
             
         return age_index
-
-    def get_fn(self, feh, vvcrit, ebv = 0.0, gravdark_i = 0.0, exttag=None):
-        """
-            Gets the filename, given a [Fe/H] value & a v/vcrit value. Assumes that the environment variable 'STORE_DIR' is set
-            and that the grid names follow feh_pX.XX_afe_0.0_vvcritX.X for their name format.
-
-            Args:
-                feh: the [Fe/H] of the desired grid from which the cmd filename will be taken.
-                vvcrit: same as above, but for v/vcrit
-                ebv: E(B-V) desired for the .cmd file.
-                gravdark_i: inclination angle for gravity darkening; default is 0.0 angles, i.e. looking @ the equator of the stars.
-                exttag: any tags to append to the end of the grid; e.g. if feh_pX.XX_afe_0.0_vvcritX.X_HB was desired, this would be 'HB'
-                        (a str, & '_' is added by this code itself).
-        """
-
-        store_dir =  os.path.join(os.environ['STORE_DIR'])
-        print(store_dir)
-        if feh < 0.0:
-            fehstr = 'm{:.2f}'.format(abs(feh))
-        else:
-            fehstr = 'p{:.2f}'.format(feh)
-
-        rotstr = '{:.1f}'.format(vvcrit)
-
-        # Get the .iso.cmd file name/path
-        gridname = 'MIST_v1.0/output/feh_{:s}_afe_p0.0_vvcrit{:s}'.format(fehstr, rotstr)
-        print(gridname)
-        # if there is an extra tag to append (e.g. for diff conv. core ovsh values):
-        if exttag != None:
-            gridname += '_{:s}'.format(exttag)
-
-        grid_dir = os.path.join(store_dir, gridname)
-
-        print(grid_dir)
-        Av = 3.1*ebv
-
-        cmdf = get_isocmdf(grid_dir, feh, vvcrit, Av = Av, gravdark_i = gravdark_i, exttag = exttag)
-        assert len(cmdf) == 1, "Got more than one .cmd file in {:s}.".format(grid_dir)
-        #self.filename = cmdf[0]
-        return cmdf[0]
 
     def get_masked(self, hdr_names, phasemask):
 
@@ -286,7 +271,6 @@ class ISOCMD:
             masked_data.append(x)
 
         return masked_data, p
-
 
     def set_isodata(self, lage, x_name, y_name, dmod=0.0, ax=None, phasemask=[], x_to_ymx=True, geneva_on=False):
         """
@@ -307,9 +291,9 @@ class ISOCMD:
             lage_str = "{:.1f} Myr".format((10**lage)/(10.**6))
 
         if exttag != None:
-            self.lbl = 'MIST({:s}): age = {:s}, [Fe/H] = {:.2f}, vvcrit = {:.1f} (i = {:.1f})'.format(exttag, lage_str,  self.feh, self.rot, self.gdark_i*(180./np.pi))
+            self.lbl = 'MIST({:s}): age = {:s}, [Fe/H] = {:.2f}, '.format(exttag, lage_str, self.feh) + r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
         else:
-            self.lbl = 'MIST: age = {:s}, [Fe/H] = {:.2f}, vvcrit = {:.1f} (i = {:.1f})'.format(lage_str, self.feh, self.rot, self.gdark_i*(180./np.pi))
+            self.lbl = 'MIST: age = {:s}, [Fe/H] = {:.2f}, '.format(lage_str, self.feh) + r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
         
 
         if len(phasemask) > 0:
@@ -336,25 +320,8 @@ class ISOCMD:
             ax.set_ylim([y.max()+0.2, y.min()-0.2])
             ax.set_title(u'MIST Isochrones: ${:s}$ vs. ${:s}$'.format(y_name, x_name))
 
-            # If true, this will plot a Geneva model at the given age for comparison, if 
-            # the file for it exists.
-            #if geneva_on:
-                #plot_geneva_iso(ages[i], rots[i], pltmass, i, color_n, ax = ax)
-
         # stellar masses:
         self.init_masses = self.isocmds[age_ind]['initial_mass']
-
-        # For masking out phases (e.g. PMS):
-        #if len(phasemask) > 0:
-        #    self.phases = self.isocmds[age_ind]['phase']
-        #    for i_pmask, pmask in enumerate(phasemask):
-        #        unmasked_ind = np.where(phases != pmask)
-                # Want a new array of only the valid phases on ea. pass to
-                # keep indices matching between x, y, and p
-        #        self.phases = phases[unmasked_ind]                    
-        #        self.x = self.x[unmasked_ind]
-        #        self.y = self.y[unmasked_ind]
-        #        self.init_masses = self.init_masses[unmasked_ind]
 
         return #x, y, init_masses, phases
 
@@ -383,72 +350,9 @@ class ISOCMD:
                 ax.scatter(x[m_i], y[m_i], lw=0.1, alpha=0.5, color = base_line.get_color(), zorder=2)
                 ax.text(x[m_i]*0.98, y[m_i], '{:.2f}'.format(init_masses[m_i]) + r' $M_{\odot}$', fontsize=4, color = base_line.get_color())
 
-        # If no masses are specified, plot some representative masses:
-        else:
-            base_line, = ax.plot(x, y, label=self.lbl, alpha = alpha)
-            sc = ax.scatter(x, y, c = init_masses, s=6, lw=0.1, edgecolor=base_line.get_color(), cmap = plt.cm.gist_rainbow, alpha=0.5, zorder=-1)
-
-            # Tracking individual masses for comparison of evolutionary states:
-            tracked_masses = []
-            massmatches = 0.0
-
-            plotted_masses = []
-
-            # The follwing for loop handles plotting several representative masses along the isochrone & labeling them
-            int_masses = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])
-            for m_i, mass in enumerate(init_masses):
-
-                # Only plot the full range of representative masses if on the first isochrone.
-                near_int = (0.01 > np.amin(abs(int_masses - float('{:.2f}'.format(mass)))))
-                # condition of brightest, bluest, or last point:
-                brightest_bluest_last = ((x[m_i] == min(x)) or (y[m_i] == min(y)) or (m_i == len(init_masses) - 1))
-
-                if  (near_int or brightest_bluest_last) & (i == 0):
-
-                    # Labeling coordinates -- attempting to not overlap the isochrone & other labels.                    
-                    txt_x = x[m_i] - 0.2
-                    txt_y = y[m_i]
-                    if m_i == len(init_masses) - 1:
-                        txt_x += 0.25
-                    elif y[m_i] == min(y):
-                        txt_y -= 0.25
-                        txt_x += 0.25
-
-                    # text label for the mass value:
-                    ax.text(txt_x, txt_y, '{:.2f}'.format(mass) + r' $M_{\odot}$', fontsize=4, color = base_line.get_color())
-                    # Plots a scatter point at the location of the star w/ a particular mass:
-                    ax.scatter(x[m_i], y[m_i], lw=0.1, alpha=0.5, color = base_line.get_color(), zorder=2)
-                    # Store the masses used; plot these masses on subsequent isochrones:
-                    tracked_masses.append(float('{:.2f}'.format(mass)))
-            
-                # To avoid crowding things, this segment plots mass labels on the side of the plot, rather than along the isochrone,
-                # this occurs for all isochrones beyond the first one.
-                # The masses picked out for plotting on the first isochrone are tracked and plotted if existing on other isochrones.
-                nearint = (0.01 > np.amin(abs(int_masses - float('{:.2f}'.format(mass)))))
-                notplt = float('{:.2f}'.format(mass)) not in plotted_masses
-                tracked = (float('{:.2f}'.format(mass)) in np.unique(tracked_masses))
-
-                nearint_notplt = (nearint) & (notplt)
-                notplt_tracked = (notplt) & (tracked)
-
-                if (nearint_notplt | notplt_tracked ) & (i > 0):
-
-                    # massmatches increases y position to avoid overlap as more masses are found:
-                    massmatches += 0.2
-                    txt_x = min(x) - 0.3
-                    txt_y = min(y) + massmatches + i*1.5
-
-                    ax.text(txt_x-0.15, txt_y, '{:.2f}'.format(mass) + r' $M_{\odot}$', fontsize=4, color = base_line.get_color())
-                    ax.scatter(x[m_i], y[m_i], lw=0.1, alpha=0.5, color = base_line.get_color(), zorder=2)
-
-                    # Draw a line connecting the text to the data point:
-                    ax.plot([txt_x, x[m_i]], [txt_y, y[m_i]], color=base_line.get_color(), lw=0.2, alpha=0.5)
-                    # track plotted masses:
-                    plotted_masses.append(float('{:.2f}'.format(mass)))
-
         return base_line, sc
 
-    def isoplot(self, ax, masses=None, xlim=[], ylim=[], shade=None, legloc='best', label=False, legsize=8, **kwargs):
+    def isoplot(self, ax, masses=None, xlims=None, ylims=None, shade=0.0, legloc='best', label=False, legsize=8, setlim=False, **kwargs):
 
         """
             Plots CMD of a MIST isochrone object.
@@ -479,44 +383,50 @@ class ISOCMD:
         kwargs['lw'] = 1
 
         base_line, = ax.plot(self.x, self.y, **kwargs)
+
+        if setlim:
+            ax.set_ylim([min(self.y), max(self.y)])
+            ax.set_xlim([min(self.x), max(self.x)])
+
+        curr_xlims, curr_ylims = expand_lims(ax, x=self.x, y=self.y, xlims=xlims, ylims=ylims, reverse_y=True)
+
         if isinstance(masses, float):
             # Get index of nearest mass:
             diff_arr = abs(self.init_masses - masses)
             m_i = np.where(diff_arr == np.min(diff_arr))[0][0]
             ax.scatter(self.x[m_i], self.y[m_i], lw=0.1, alpha=0.5, color = base_line.get_color(), zorder=2)
             ax.text(self.x[m_i]*0.98, self.y[m_i], '{:.2f}'.format(self.init_masses[m_i]) + r' $M_{\odot}$', fontsize=8, color = 'k')
-        
-        #if self.xextent == [0,0]:
-        #    self.xextent = [self.x.min()-0.05, self.x.max()+0.05]
-        #if self.yextent == [0,0]:
-        #    self.yextent = [self.y.max()+0.2, self.y.min()-0.2]
 
-        if len(xlim) == 0:
-            if self.xextent[1] < self.x.max()+0.05:
-                self.xextent[1] = self.x.max()+0.05
-            if self.xextent[0] > self.x.min()-0.05:
-                self.xextent[0] = self.x.min()-0.05
-        elif len(xlim) == 2:
-            self.xextent = xlim
+        curr_xlims, curr_ylims = expand_lims(ax, ypad=0.05, xpad=0.05)
 
-        if len(ylim) == 0: 
-            if self.yextent[1] > self.y.min()-0.2:
-                self.yextent[1] = self.y.min()-0.2 
-            if self.yextent[0] < self.y.max()+0.2:
-                self.yextent[0] = self.y.max()+0.2
-        elif len(ylim) == 2:
-            self.yextent = ylim
+        self.xextent = np.array(curr_xlims)
+        self.yextent = np.array(curr_ylims)
+
+        # ticks
+        #majorLocator   = MultipleLocator(5)
+        #minorLocator   = MultipleLocator(1)
+
+        #ax.xaxis.set_major_locator(majorLocator)
+        #ax.xaxis.set_minor_locator(minorLocator)
+        #ax_max = max(curr_xlims)
+        #step = ax_max / 5.
+        # Set the major ticks
+        #major_ticks = np.arange(ax_max + 1, step=step)
+        #ax.set_xticks(major_ticks)
+        # And also minor
+        #minor_ticks = np.arange(ax_max + 1, step=step / 10)
+        #ax.set_xticks(minor_ticks, minor=True)
 
         ax.set_ylabel(u"${:s}$".format(self.y_name))
         ax.set_xlabel(u"${:s}$".format(self.x_name))
-        ax.set_xlim(self.xextent)
-        ax.set_ylim(self.yextent)
+        #ax.set_xlim(self.xextent)
+        #ax.set_ylim(self.yextent)
         ax.set_title(u'MIST Isochrones: ${:s}$ vs. ${:s}$'.format(self.y_name, self.x_name))
 
         if legloc != None:
            legend = ax.legend(loc=legloc, prop={'size':legsize}, frameon=True)
 
-        return ax, self.x, self.y
+        return self.x, self.y
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -530,7 +440,7 @@ class EEP:
     
     """
     
-    def __init__(self, feh=None, vvcrit=None, mass=None, filename=None, gravdark_i = 0.0, exttag = None, verbose=True):
+    def __init__(self, feh=0.00, vvcrit=0.0, mass=1.0, filename=None, gravdark_i = 0.0, exttag = None, verbose=True):
         
         """
         
@@ -551,29 +461,31 @@ class EEP:
             
         """
         
+        # if a track.eep file name is given, use it.
         if filename != None:
             self.filename = filename
 
+        # or else find a track.eep file given feh, v/vcrit, mass, and an extra tag (e.g. 'TP'):
         else:
-            self.filename = self.get_fn(feh, vvcrit, mass, exttag)
+            self.filename = get_fn(feh, vvcrit, mode='eep', mass=mass, exttag=exttag)
             if isinstance(self.filename, list):
                 # find the closest mass:
                 masslist = self.filename
                 masslist = map(float, masslist)
                 diffarr = abs(np.array(masslist) - mass)
-                print(diffarr)
-                print(masslist)
                 close_idx = np.where(diffarr == diffarr.min())[0][0]
                 mass = masslist[close_idx]
                 print(mass)
                 print('Using {:.2f} Msol instead.'.format(mass))
-                self.filename = self.get_fn(feh, vvcrit, mass, exttag)
+                self.filename = get_fn(feh, vvcrit, mode='eep', mass=mass, exttag=exttag)
 
         if verbose:
             print('Reading in: ' + self.filename)
 
-        self.phase_names = ['MS',None, 'SGB+RGB', 'CHeB', 'EAGB', 'TPAGB', 'post-AGB', 'WR', 'PMS']
-                        
+        # dictionary for phases & their names:
+        self.phase_names = {-1:'PMS', 0:'MS', 2:'SGB+RGB', 3:'CHeB', 4:'EAGB', 5:'TPAGB', 6:'post-AGB', 9:'WR'}
+        
+        # reads the MIST version number, abundances, v/vcrit, initial mass, header list, data (eeps):
         self.version, self.abun, self.rot, self.minit, self.hdr_list, self.eeps = self.read_eep_file()
 
         if gravdark_i > 0.0:
@@ -584,38 +496,6 @@ class EEP:
         self.gravdark_i = gravdark_i
 
         self.lbl = r'MIST: M = {:.2f}'.format(self.minit)+r' $M_{\odot}$, '+r'$\Omega/\Omega_c$'+' = {:.1f}, i = {:.2f} deg'.format(self.rot, self.gravdark_i)
-
-    
-    def get_fn(self, feh, vvcrit, mass, exttag):
-
-        store_dir =  os.path.join(os.environ['STORE_DIR'], 'MIST_v1.0', 'output')
-        if feh < 0.0:
-            fehstr = 'm{:.2f}'.format(abs(feh))
-        else:
-            fehstr = 'p{:.2f}'.format(feh)
-
-        rotstr = '{:.1f}'.format(vvcrit)
-
-        # Getting the track's file name:
-        if exttag == None:
-            gridname = 'feh_{:s}_afe_p0.0_vvcrit{:s}'.format(fehstr, rotstr)
-        else:
-            gridname = 'feh_{:s}_afe_p0.0_vvcrit{:s}_{:s}'.format(fehstr, rotstr, exttag)
-        grid_dir = os.path.join(store_dir, gridname)
-        eepf = get_masstrackeepf(grid_dir, mass)
-
-        # Trying to get the track.eep for a given mass value. Print masses found on failure:
-        if not eepf:
-            filelist = glob.glob(os.path.join(grid_dir, 'eeps/*M.track.eep'))
-        
-            print('Valid masses found:\n')
-            masslist = []
-            for f in filelist:
-                starmass = float(f.split('eeps/')[1].split('M')[0])/100.0
-                masslist.append(starmass)
-            return sorted(masslist)
-
-        return eepf
 
     def read_eep_file(self):
         
@@ -643,6 +523,11 @@ class EEP:
 
     def get_masked(self, hdr_names, phasemask):
 
+        """
+            Returns a data column that has had specified phases removed from it (i.e. removes rows corresp. to those undesired
+        phases of evolution).
+        """
+
         masked_data = []
         for name in hdr_names:
             # For masking out phases (e.g. PMS):
@@ -660,11 +545,15 @@ class EEP:
         return masked_data
 
     def get_phaselen(self, phasemask):
+        """
+            Returns the length of time of a phase of evolution in years.
+        """
         ages = self.get_masked(['star_age'], phasemask=phasemask)[0]
         return ages[-1] - ages[0]
         		
-    def plot_HR(self, fignum=0, phases=[], phasecolor=[], phasemask = [], ax = None, shade = None, cbar_valname = None, masslbl=True,
-                vvclbl=False, xlim = [], ylim = [], agemarks = None, legloc = None, label=False, showplt = False, savename = None, **kwargs):
+    def plot_HR(self, fignum=0, phases=[], phasecolor=[], phasemask = [], ax = None, shade = 0.0, cbar_valname = None, masslbl=True, vvclbl=False,
+                title=None, xlims = None, ylims = None, agemarks = None, legloc = None, label=False, showplt = False, savename = None, xlabel=True,
+                ylabel = True, geneva_on=False, MIST_on = True, setlim=False, **kwargs):
         
         """
 
@@ -691,6 +580,15 @@ class EEP:
 
         self.phasemask = phasemask
 
+        if  shade > 1.0 or shade < 0.0:
+            shade = 0.0
+            print("Warning: shade must be between 0 and 1.")
+        if shade != None:
+            lc = plt.cm.Dark2(shade)
+            kwargs['c'] = lc
+        if not MIST_on:
+            kwargs['alpha'] = 0.0
+
         hdr_names = ['log_Teff', 'log_L']
         if cbar_valname is not None:
             hdr_names.append(cbar_valname)
@@ -709,21 +607,25 @@ class EEP:
         #    z = cbar_vals
 
         # For masking out phases (e.g. PMS):
-        if len(phasemask) >= 0:
+        if len(phasemask) > 0:
             if isinstance(cbar_valname, str):
                 x, y, z = self.get_masked(hdr_names, phasemask=phasemask) 
             else:
                 x, y = self.get_masked(hdr_names, phasemask=phasemask)
+            x = x[::-1]
+            y = y[::-1]
         else:
-            x = self.eeps['log_Teff']
-            y = self.eeps['log_L']
+            x = self.eeps['log_Teff'][::-1]
+            y = self.eeps['log_L'][::-1]
         
         if ax == None:
             fig = plt.figure(fignum)        
             ax = fig.add_subplot(111)
 
-        ax.set_xlabel(r'$log(T_{eff})$')
-        ax.set_ylabel(r'$log(L/L_{\odot})$')
+        if xlabel:
+            ax.set_xlabel(r'$log(T_{eff})$')
+        if ylabel:
+            ax.set_ylabel(r'$log(L/L_{\odot})$')
     
         if label == True:
             kwargs['label'] = self.lbl
@@ -750,7 +652,7 @@ class EEP:
                 if 'p' not in locals():
                     p = self.eeps['phase']
 
-                p_ind = np.where(p == phase)
+                p_ind = np.where(p == phase)[0][::-1]
                 if len(p_ind) > 0:
                     if phasecolor == '':
                         ax.plot(x[p_ind], y[p_ind], linewidth=4.0, alpha=0.5)
@@ -768,10 +670,35 @@ class EEP:
         self.x = x
         self.y = y
 
+        # If desired, plot an analogous Geneva model for comparison:
+
+        # maintain current axis limits prior to Geneva plotting.
+        if setlim:
+            ax.set_ylim([min(self.y), max(self.y)])
+            ax.set_xlim([min(self.x), max(self.x)])
+
+        curr_ylims = ax.get_ylim()
+        curr_xlims = ax.get_xlim()
+
+        if geneva_on:
+            try:
+                geneva_star = rg.star(vvc = self.rot, minit = self.minit)
+                genx, geny, lc = geneva_star.plot_HR(ax = ax, label = True, shade = shade, ls = '--')
+
+            # in case the Geneva star is not recoverable:
+            except IOError:
+                print('Geneva star: v/vcrit = {:.1f}, Mass = {:.2f}'.format(self.rot, self.minit))
+
+        ax.set_xlim(curr_xlims)
+        ax.set_ylim(curr_ylims)
+        curr_xlims, curr_ylims = expand_lims(ax, x=self.x, y=self.y, xlims=xlims, ylims=ylims, reverse_x=True)
+
         # mark the tracks if desired:
         if masslbl or vvclbl:
-            self.mark_track(ax, masslbl=masslbl, vvclbl=vvclbl)
-        #plotted_masses.append(self.minit)
+            curr_xlims, curr_ylims = self.mark_track(ax, xlims = xlims, ylims = ylims, masslbl=masslbl, vvclbl=vvclbl)
+        
+        # apply a 1% pad to the axes:
+        curr_xlims, curr_ylims = expand_lims(ax, ypad=0.01, xpad=0.001)
      
         # marking age points on track:
         if agemarks != None:
@@ -804,45 +731,13 @@ class EEP:
             cbar = plt.colorbar(lc, ax=ax)
             cbar.set_label(cbar_valname)
         #--------------------------------------------------------------------------------------
-        
-        ax.set_title('HRD Evolutionary Tracks')
 
-        if len(xlim) == 2:
-            ax.set_xlim(xlim)
-        else:
-            xlims = np.array(ax.get_xlim())
-            if x.max() > xlims.max():
-                xmax = x.max()
-            else:
-                xmax = xlims.max()
-            if x.min() < xlims.min():
-                xmin = x.min()
-            else:
-                xmin = xlims.min()
-            ax.set_xlim([1.01*xmax, 0.99*xmin])
+        if title != None:
+            ax.set_title(title)
 
-        if len(ylim) == 2:
-            ax.set_ylim(ylim)
-        else:
-            ylims = np.array(ax.get_ylim())
-            if y.max() > ylims.max():
-                ymax = y.max()
-            else:
-                ymax = ylims.max()
-            if y.min() < ylims.min():
-                ymin = y.min()
-            else:
-                ymin = ylims.min()            
-            ax.set_ylim([0.99*ymin, 1.01*ymax])
-
-    #    if isinstance(cbar_valname, str):
-    #       cbar = plt.colorbar(lc, ax=ax)
-    #       cbar.set_label(cbar_valname)
-     
         if legloc != None:
             plt.legend(loc = legloc, prop={'size':8})
 
-        #if savename == None:
         if savename != None:
             plt.savefig(savename, dpi=600)
         if showplt:
@@ -851,11 +746,11 @@ class EEP:
             plt.show()
 
         if isinstance(cbar_valname, str):
-            return ax, lc, x, y
+            return lc, x, y
         else:
-            return ax, x, y
+            return x, y
 
-    def mark_track(self, ax, masslbl=True, vvclbl=False):
+    def mark_track(self, ax, xlims, ylims, masslbl=True, vvclbl=False):
         # Code responsible for making marks on the track and coloring it:
         #--------------------------------------------------------------------------------------
         # for placement on first loop if masking SGB+ (phase label 2):
@@ -883,27 +778,33 @@ class EEP:
             ax.scatter(x[idx], y[idx], marker='+')
             txtx = x[loop1_idx]
             txty = y[loop1_idx]
-            xfac = 1.003
-            yfac = 0.997
+            xfac = 0.01
+            yfac = 0.05
 
         # or else label at the bluest point.
         else:
             txtx = x[np.where(x == x.max())]
-            xfac = 1.003
+            xfac = 0.01
             txty = y[np.where(x == x.max())]
-            yfac = 0.997
+            yfac = 0.05
 
         # Label v/vcrit of the track:
         if vvclbl:
-            ax.scatter(txtx, txty*yfac, marker = 'x', s=4, label=r'$\frac{\Omega}{\Omega_{crit}} = $' + "{:.1f}".format(self.rot),
+            txty = txty-abs(txty)*yfac
+            ax.scatter(txtx, txty, marker = 'x', s=4, label=r'$\frac{\Omega}{\Omega_{crit}} = $' + "{:.1f}".format(self.rot),
                         c = [0.4+self.rot, 0, 0.6-self.rot], lw= 0.8, zorder = 9999)  
 
         # Label the mass of the track:
         #if self.minit not in plotted_masses:
         if masslbl:
-            ax.text(txtx*xfac, txty*yfac, "{:.2f} ".format(self.minit) + r'$M_{\odot}$', fontsize = 10)
+            txtx = txtx+abs(txtx)*xfac
+            txty = txty-abs(txty)*yfac
+            ax.text(txtx, txty, "{:.2f} ".format(self.minit) + r'$M_{\odot}$', fontsize = 10)
 
-        return
+        # expand the axes to make space for new text.
+        xlims, ylims = expand_lims(ax, x=txtx, y=txty, reverse_x=True)
+
+        return xlims, ylims
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1032,7 +933,7 @@ class EEPCMD:
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-def color_lineby_z(x, y, z, zmin, zmax, ax, alpha=1.0):
+def color_lineby_z(x, y, z, zmin, zmax, ax, **kwargs):
         
     """
         See http://matplotlib.org/examples/pylab_examples/multicolored_line.html as the source.
@@ -1044,8 +945,81 @@ def color_lineby_z(x, y, z, zmin, zmax, ax, alpha=1.0):
     lc = LineCollection(segments, cmap=plt.get_cmap('jet'), norm=plt.Normalize(zmin, zmax))
     lc.set_array(z)
     #lc.set_clim(vmin=0.0,vmax=1.0)
-    lc.set_alpha(alpha)
+
+    try:
+        lc.set_alpha(kwargs['alpha'])
+    except KeyError:
+        pass
+
+    try:
+        lc.set_label(kwargs['label'])
+    except KeyError:
+        pass
+
+    try:
+        lc.set_linestyle(kwargs['ls'])
+    except KeyError:
+        pass
 
     ax.add_collection(lc)
 
     return ax, lc
+
+def expand_lims(ax, x=None, y=None, xlims=None, ylims=None, reverse_x=False, reverse_y=False, xpad=0, ypad=0):
+
+    """
+        Expands the x and y limits of the given axis; e.g. if plotting on an axis with limits
+    that are too small to encompass the given x or y data points, expand the maxmimum and minimum values.
+    """
+    if xpad > 0 or ypad > 0:
+        xpad = mkpad(ax.get_xlim(), xpad)
+        ypad = mkpad(ax.get_ylim(), ypad)
+        if ylims == None:
+            ylims = ax.get_ylim()
+        if xlims == None:
+            xlims = ax.get_xlim()
+        ylims = [limit + ypad[i] for i, limit in enumerate(ylims)]
+        xlims = [limit + xpad[i] for i, limit in enumerate(xlims)]
+        ax.set_ylim(ylims)
+        ax.set_xlim(xlims)
+
+        return xlims, ylims
+
+    # plot limits:
+    if ylims == None:
+        if isinstance(y, type(None)):
+            ylims = ax.get_ylim()
+        else:
+            # get the largest of the current limits & given data:
+            ymax = max(max(y), max(ax.get_ylim()))
+            # '     ' smallest '                                ':         
+            ymin = min(min(y), min(ax.get_ylim()))
+            # reverses axes if told to:
+            ylims = [ymin, ymax] if not reverse_y else [ymax, ymin]
+
+    # same for x lims:
+    if xlims == None:
+        if isinstance(x, type(None)):
+            xlims = ax.get_xlim()
+        else:
+            xmax = max(max(x), max(ax.get_xlim()))
+            xmin = min(min(x), min(ax.get_xlim()))
+            xlims = [xmin, xmax] if not reverse_x else [xmax, xmin]
+
+    # Set limits, expanding to the extent that encompasses the full dataset, or else staying at the current
+    # limits if they already encompass all data.
+    ax.set_ylim(ylims)
+    ax.set_xlim(xlims)
+
+    return xlims, ylims
+
+def mkpad(lims, percent):
+
+    pads = []
+    for lim in lims:
+        if lim == max(lims):
+            pads.append(abs(lim)*percent)
+        elif lim == min(lims):
+            pads.append(-abs(lim)*percent)
+ 
+    return pads

@@ -18,8 +18,6 @@ def create_interpolants(npz):
 
 # angle in radians [0,pi/2]
 def gdiso(iso, angle):
-    # convert angle to radians:
-    angle = angle*(pi/180.)
     #read in an isochrone set
     #fn=#'/n/conroyfs1/sgossage/MIST_grids/MIST_v1.0/output/feh_p0.15_afe_p0.0_vvcrit0.5/isochrones/MIST_v1.0_feh_p0.15_afe_p0.0_vvcrit0.5_full.iso'
     #x=ISO(filename) #ISO('MIST_v1.0_feh_p0.00_afe_p0.0_vvcrit0.4_full.iso')
@@ -68,7 +66,6 @@ def gdiso(iso, angle):
 
 # angle in radians [0,pi/2]
 def gdtrack(track, angle):
-    angle = angle*(pi/180.)
     #read in an isochrone set
     #fn=#'/n/conroyfs1/sgossage/MIST_grids/MIST_v1.0/output/feh_p0.15_afe_p0.0_vvcrit0.5/isochrones/MIST_v1.0_feh_p0.15_afe_p0.0_vvcrit0.5_full.iso'
     #x=ISO(filename) #ISO('MIST_v1.0_feh_p0.00_afe_p0.0_vvcrit0.4_full.iso')
@@ -272,15 +269,3 @@ def eformat(f, prec, exp_digits):
     mantissa, exp = s.split('e')
     # add 1 to digits as 1 is taken by sign +/-
     return "%sE%+0*d"%(mantissa, exp_digits+1, int(exp))
-
-#plot(C_T*T, log10(C_L*L), color='Red', label=r'$i=\pi/2$')
-
-#xlim(11000,2000)
-#ylim(0,3.0)
-
-#xlabel(r'$T_{eff} (K)$', fontsize=18)
-#ylabel(r'$L/L_{\odot}$', fontsize=18)
-
-#legend(loc='lower right', fontsize=18, fancybox=True)
-
-#show()

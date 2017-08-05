@@ -3,7 +3,7 @@ import os
 import numpy as np
 from gdiso import *
 
-def createcmd(photstr='UBVRIplus', feh= None, vvcrit = None, cov = None, Av=None, fname = None, gravdark_i = 0.0):
+def createcmd(isoobj, photstr='UBVRIplus', feh= None, vvcrit = None, cov = None, Av=None, fname = None, gravdark_i = 0.0):
 
     """
         This function will find a number of MIST .iso files and run A. Dotter's make_cmd code using them to create
@@ -47,7 +47,7 @@ def createcmd(photstr='UBVRIplus', feh= None, vvcrit = None, cov = None, Av=None
         pathtoisos = os.path.join(storedir, 'MIST_v1.0/output/*/isochrones/{:s}'.format(search_str))
     else:
         pathtoisos = fname
-    print(pathtoisos)
+    #print(pathtoisos)
     # Returns a list of paths to each .iso file found in path structure above:
     isofiles = glob.glob(pathtoisos)
     # Go through the .iso file list and run A. Dotter's make_cmd program on them:
@@ -63,7 +63,8 @@ def createcmd(photstr='UBVRIplus', feh= None, vvcrit = None, cov = None, Av=None
         # Check if gravity darkening is desired:
         if gravdark_i > 0.0:
             # Will check for GDed .iso file; creates one if nec.
-            filename = rw_gdiso(filename, gravdark_i)
+            isoobj = ISO(filename)
+            filename = rw_gdiso(isoobj, filename, gravdark_i)
             # replace filename with the new GD file:
             isofiles[idx] = filename
 
