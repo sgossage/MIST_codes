@@ -5,11 +5,15 @@ import os
 import sys
 import subprocess
 import shutil
+import numpy as np
 from distutils.dir_util import copy_tree
 
-def checkruns(runname_str, out_sacct=True):
+def checkruns(runname_str, out_sacct=False):
 
     # out_sacct can't be turned off if using the script currently; will change.
+
+    if mode == 'check':
+        out_sacct == True
 
     rundirs = glob(runname_str)
 
@@ -18,27 +22,64 @@ def checkruns(runname_str, out_sacct=True):
     for rundir in rundirs:
         failed_massdirs = []
         jobids = []
-        trackdirs = glob(os.path.join(rundir, '*M_dir'))
+        trackdirs = glob(os.path.join(rundir, '*M*dir'))
         for trackdir in trackdirs:
             # Checks for 'Fatal Error' string in the SLURM *.e file of the run's tracks:
             try:
-                errfile = glob(os.path.join(trackdir, '*.e'))[0]
-            except IndexError:
-                print("{:s} is missing a SLURM .e (i.e., error) file.".format(trackdir))
-                continue
+                try:
+                    errfile = glob(os.path.join(trackdir, '*re.e'))[0]
+                except IndexError:
+                    errfile = glob(os.path.join(trackdir, '*.e'))[0]
 
-            # Open .e file:
-            with open(errfile, 'r') as ef:
-                errlines = ef.readlines()
-                for line in errlines:
-                    if 'Fatal Error' in line:
-                        print("{:s} encountered a fatal error.".format(trackdir))
+                # Open .e file:
+                with open(errfile, 'r') as ef:
+                    errlines = ef.readlines()
+                    fatal = False
+                    for line in errlines:
+                        if 'Fatal Error' in line:
+                            print("{:s} encountered a fatal error.".format(trackdir))
+                            failed_massdirs.append(trackdir)
+                            fatal = True
+                            break
+                        elif 'slurmstepd: error' in line:
+                            print("{:s} encountered an error: {:s}.".format(trackdir, line.split('slurmstepd:error: ')[-1]))
+                            failed_massdirs.append(trackdir)
+                            fatal = True
+                            break
+                if fatal:
+                    continue
+
+            except IndexError:
+                print("{:s} is missing a SLURM .e (i.e., error) file.".format(trackdir))   
+
+            # Open history .data file
+            try:
+                histf = glob(os.path.join(trackdir, 'LOGS/*history.data'))[0]
+                with open(histf, 'r') as hf:
+                    try:
+                        arrdata = np.genfromtxt(hf, skip_header = 5, names = True)
+                    except ValueError, emsg:
+                        # rewrite/write to history file created mismatched column #s for some reason.
+                        print("{:s} has an erroneous history file.".format(trackdir))
+                        emsg = str(emsg).split(' ')
+                        for string in emsg:
+                            if '#' in string:
+                                linenum = int(string.split('#')[-1])
+                        print(linenum)                    
                         failed_massdirs.append(trackdir)
+                        continue
+            except IndexError:
+                print('{:s} is missing a history file.'.format(trackdir))
+                failed_massdirs.append(trackdir)
+                continue
 
             if out_sacct:
                 # .o file is used to gather the SLURM job id; used to check job status.
                 try:
-                    outfile = glob(os.path.join(trackdir, '*.o'))[0]
+                    try:
+                        outfile = glob(os.path.join(trackdir, '*re.o'))[0]
+                    except IndexError:
+                        outfile = glob(os.path.join(trackdir, '*.o'))[0]
                 except IndexError:
                     print("{:s} is missing a SLURM .o (i.e., output) file.".format(trackdir))
                     continue
@@ -68,7 +109,7 @@ def checkruns(runname_str, out_sacct=True):
 
 def getphotos(runname_str, TPextend=True):
 
-    # out_sacct can't be turned off if using the script currently; will change.
+    # TPextend arg unnecc.?
 
     rundirs = glob(runname_str)
 
@@ -189,9 +230,9 @@ if __name__ == '__main__':
 
         Usage:
             
-            >> ./check_jobs.py feh_p0.15*vvcrit*
+            >> ./check_jobs.py feh_p0.15*vvcrit* rerun
 
-        This would check runs with names following the above wildcard.
+        This would check runs with names following the above wildcard in 'rerun' mode.
 
         The current fail state checked for is related to some SLURM scheduling/allocation failure for the job possibly? It involves
     a certain file being deemed inaccessible, leading the job to fail during the initial steps of the MESA run for certain tracks.
@@ -209,9 +250,9 @@ if __name__ == '__main__':
     #prepend MIST grid path to runs:
     runname_str = os.path.join(os.environ['MIST_GRID_DIR'], 'MIST_v1.0', runname_str)
 
-    if mode == 'rerun':
+    if mode == 'rerun' or mode == 'check':
         # now check the runs for failed tracks:
-        failed_dict = checkruns(runname_str)
+        failed_dict = checkruns(runname_str, mode)
 
         # Go through various run directories found...
         for rundir in failed_dict:
@@ -219,15 +260,26 @@ if __name__ == '__main__':
             failed_massdirs = failed_dict[rundir]
             print("___________________________________________________________")
             print("In {:s} re-submitting {:d} jobs.".format(target_of(rundir), len(failed_massdirs)))
-
-            # Re-submit the failed tracks:
-            for failed_massdir in failed_massdirs:
-                os.chdir(failed_massdir)
-                print("re-submitting {:s}...".format(target_of(failed_massdir)))
-                slurmfile = glob(os.path.join(failed_massdir, '*M*run.sh'))[0]
-                print(slurmfile)
-                #os.system("sbatch " + slurmfile)
-                os.chdir(os.environ['MIST_CODE_DIR'])
+            
+            if mode == 'rerun':
+                # Re-submit the failed tracks:
+                for failed_massdir in failed_massdirs:
+                    os.chdir(failed_massdir)
+                    print("re-submitting {:s}...".format(target_of(failed_massdir)))
+                    slurmfile = glob(os.path.join(failed_massdir, '*M*run.sh'))[0]
+                    #print(slurmfile)
+                    print('Clearing LOGS directory...')
+                    os.system("rm {:s}/LOGS/*".format(failed_massdir))
+                    # copy over clean, mk, rn.
+                    print('Copying clean, mk, rn, clean/, & make/.')
+                    os.system("cp {:s}/clean .".format(os.environ['MESAWORK_DIR']))
+                    os.system("cp {:s}/mk .".format(os.environ['MESAWORK_DIR']))
+                    os.system("cp {:s}/rn .".format(os.environ['MESAWORK_DIR']))
+                    os.system("cp -r {:s}/src .".format(os.environ['MESAWORK_DIR']))
+                    os.system("cp -r {:s}/make .".format(os.environ['MESAWORK_DIR']))
+                    os.system("cp inlist_project inlist")
+                    os.system("sbatch " + slurmfile)
+                    os.chdir(os.environ['MIST_CODE_DIR'])
 
     elif mode == 'resume':
         res_dict = getphotos(runname_str)
