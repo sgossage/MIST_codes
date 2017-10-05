@@ -38,6 +38,9 @@ if __name__ == "__main__":
         # If partition is unspecified, use default as conroy.
         partition = "conroy"
 
+    if partition != 'conroy' or partition != 'conroy-intel':
+        partition = 'conroy'
+
     Z = calc_xyz.calc_xyz(float(FeH),input_feh=True)[-1]
     dirname = os.path.join(os.environ['MIST_GRID_DIR'], runname)
     

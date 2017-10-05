@@ -1,12 +1,13 @@
 from __future__ import print_function
 import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 import matplotlib as mpl
 mpl.use('Agg')
+import matplotlib.pyplot as plt
 import os
 import glob
 import seaborn as sns
+from collections import OrderedDict
 # no seaborn gridlines on plot, and white bg:
 sns.set_context('paper')
 sns.set(font='serif')
@@ -175,7 +176,7 @@ class ISOCMD:
         
         """
         Av = 3.1*ebv
-        iso_filename = ISO(feh = feh, vvcrit = vvcrit, gravdark_i = gravdark_i, exttag = exttag, read=False).filename #get_fn(feh, vvcrit, mode='isocmd', ebv = ebv, gravdark_i = gravdark_i, exttag=exttag)
+        iso_filename = ISO(feh = feh, vvcrit = vvcrit, gravdark_i = gravdark_i, exttag = exttag, read=False).filename
         self.filename = isomist.createcmd(iso_filename, Av = Av, gravdark_i = gravdark_i)
         self.exttag = exttag
         self.feh = feh
@@ -254,28 +255,77 @@ class ISOCMD:
             
         return age_index
 
-    def get_masked(self, hdr_names, phasemask):
+    def get_masked(self, hdr_name, phasemask, age_ind=slice(None,None), dmod=0.0):
 
-        masked_data = []
+        # For masking out phases (e.g. PMS); grabs appropriate age block if told to:
+        x = self.isocmds[age_ind][hdr_name]
+        p = self.isocmds[age_ind]['phase']
+        # if phasemask = [] (default), this loop is skipped and there's no mask.
+        for pmask in phasemask:
+            unmasked_ind = np.where(p != pmask)
+            # Want a new array of only the valid phases on ea. pass to
+            # keep indices matching between x, y, and p
+            p = p[unmasked_ind]                    
+            x = x[unmasked_ind]
+
+        masked_data = x + dmod
+
+        return masked_data
+
+    def get_data(self, hdr_names, phasemask, lage=None, age_ind=None, dmod=0.0):
+
+        # returns a dictionary of data with keys as converted header names and items as the corresp. data columns.
+
+        if age_ind == None:
+            if lage != None:
+                age_ind = self.age_index(lage)
+            else:
+                print('To gather isochrone data, please specify the isochrones log10 age (paramater lage not set).')
+                print('Alternatively, please supply the data array index corresponding to the desired age block.')
+                return
+        
+
+        # get data values for given x, y names (considering phase masks).
+        data_list = []
+        data_dict = {}
         for name in hdr_names:
-            # For masking out phases (e.g. PMS):
-            x = self.eeps[name]
-            p = self.eeps['phase']
-            for pmask in phasemask:
-                unmasked_ind = np.where(p != pmask)
-                # Want a new array of only the valid phases on ea. pass to
-                # keep indices matching between x, y, and p
-                p = p[unmasked_ind]                    
-                x = x[unmasked_ind]
 
-            masked_data.append(x)
+            # check for math operations (all of these get the data for the various cases); only works for ops btwn two columns atm.
+            # e.g. you give hdr_names = ['Bessel_B - Bessel_V', 'Bessel_V'], this will set a data element as B-V with key 'B-V' and 
+            # another w/ V and key 'V'.
+            # will mask evolutionary phases accoring to 'phasemask' argument.
+            if '-' in name:
+                splitnames = name.split('-')
+                data = self.get_masked(splitnames[0], phasemask=phasemask, age_ind=age_ind, dmod=dmod) - \
+                       self.get_masked(splitnames[1], phasemask=phasemask, age_ind=age_ind, dmod=dmod)
+            elif '+' in name:
+                splitnames = name.split('+')
+                data = self.get_masked(splitnames[0], phasemask=phasemask, age_ind=age_ind, dmod=dmod) + \
+                       self.get_masked(splitnames[1], phasemask=phasemask, age_ind=age_ind, dmod=dmod)
+            elif '*' in name:
+                splitnames = name.split('*')
+                data = self.get_masked(splitnames[0], phasemask=phasemask, age_ind=age_ind, dmod=dmod) * \
+                       self.get_masked(splitnames[1], phasemask=phasemask, age_ind=age_ind, dmod=dmod)
+            elif '/' in name:
+                splitnames = name.split('/')
+                data = self.get_masked(splitnames[0], phasemask=phasemask, age_ind=age_ind, dmod=dmod) / \
+                       self.get_masked(splitnames[1], phasemask=phasemask, age_ind=age_ind, dmod=dmod)
+            else:
+                data = self.get_masked(name, phasemask=phasemask, age_ind=age_ind, dmod=dmod)
 
-        return masked_data, p
+            # will store the data column in a dictionary with the key as the column's corresponding name (converted).
+            data_list.append((convert_name(name), data))
+
+        # OrderedDict remembers the order in which items are placed in the dictionary. Uses a list of tuples corresp. to the dictionary's items.
+        data_dict = OrderedDict(data_list)
+
+        return data_dict
 
     def set_isodata(self, lage, x_name, y_name, dmod=0.0, ax=None, phasemask=[], x_to_ymx=True, geneva_on=False):
         """
             Given a log10 age, get the data desired to plot the CMD or HRD
         """
+
         exttag = self.exttag
 
         age_ind = self.age_index(lage)
@@ -290,38 +340,28 @@ class ISOCMD:
         if 6.0 <= lage < 9.0:
             lage_str = "{:.1f} Myr".format((10**lage)/(10.**6))
 
+        # creates a plot label for the isochrone.
         if exttag != None:
-            self.lbl = 'MIST({:s}): age = {:s}, [Fe/H] = {:.2f}, '.format(exttag, lage_str, self.feh) + r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
+            self.lbl = 'MIST({:s}): age = {:s}, [Fe/H] = {:.2f}, '.format(exttag, lage_str, self.feh) + \
+                      r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
         else:
-            self.lbl = 'MIST: age = {:s}, [Fe/H] = {:.2f}, '.format(lage_str, self.feh) + r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
-        
+            self.lbl = 'MIST: age = {:s}, [Fe/H] = {:.2f}, '.format(lage_str, self.feh) + \
+                       r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
 
-        if len(phasemask) > 0:
-            self.x, self.y, self.phases = self.get_masked([x_name, y_name], phasemask=phasemask)
-            self.x += dmod
-            self.y += dmod
-        else:
-            self.x = self.isocmds[age_ind][x_name] + dmod
-            self.y = self.isocmds[age_ind][y_name] + dmod
-            self.phases = self.isocmds[age_ind]['phase']
-        # For e.g. colors; assumes y is blue mag if CMD 
-        if x_to_ymx:
-            self.x = self.y - self.x
-            # make x_name 'y_name - x_name'
-            x_name = "{:s} - {:s}".format(y_name, x_name)
+        datdict = self.get_data([x_name, y_name], phasemask, age_ind=age_ind, dmod=dmod)
+        self.x_name, self.y_name = datdict.keys()
+        self.x, self.y = datdict.values()
 
-        self.x_name = x_name
-        self.y_name = y_name
-
+        # sets labels:
         if ax is not None:
-            ax.set_ylabel(u"${:s}$".format(y_name))
-            ax.set_xlabel(u"${:s}$".format(x_name))
+            ax.set_ylabel(u"${:s}$".format(self.y_name), rotation=90)
+            ax.set_xlabel(u"${:s}$".format(self.x_name))
             ax.set_xlim([x.max()+0.05, x.min()-0.05])
             ax.set_ylim([y.max()+0.2, y.min()-0.2])
-            ax.set_title(u'MIST Isochrones: ${:s}$ vs. ${:s}$'.format(y_name, x_name))
+            #ax.set_title(u'MIST Isochrones: ${:s}$ vs. ${:s}$'.format(self.y_name, self.x_name))
 
-        # stellar masses:
-        self.init_masses = self.isocmds[age_ind]['initial_mass']
+        # stellar masses (not needed?):
+        # self.init_masses = self.isocmds[age_ind]['initial_mass']
 
         return #x, y, init_masses, phases
 
@@ -970,34 +1010,73 @@ def expand_lims(ax, x=None, y=None, xlims=None, ylims=None, reverse_x=False, rev
     """
         Expands the x and y limits of the given axis; e.g. if plotting on an axis with limits
     that are too small to encompass the given x or y data points, expand the maxmimum and minimum values.
+
+        Always give an axis to operate on.
+ 
+        Give x and/or y data to have this method consider expanding the current limits to incorporate any
+    data that may lie outside of the current axis limits. If x or y limits are given this will NOT happen,
+    the method will assume those limits are meant to be applied.
+
+        So to expand axis to incorporate given data values:
+
+        >> expand_lims(ax, xdata, ydata)
+
+    (optional to include both x and y data, could be one or the other also).
+
+        Additionally, may include padding values to extend the axes further, by some percentage amount. So
+    doing:
+
+        >> expand_lims(ax, xpad=0.01)
+
+    would extend the x-axis by 1% of its current limit values (in both directions, neg. and pos.). Right now
+    padding operates exclusively from expanding, so if pads are given, padding will occur without expansion;
+    perhaps should change this.
+
     """
+
+    # if x or y padding values (given as percentages) are greater than 0...
     if xpad > 0 or ypad > 0:
+        
+        # create list of pads to add to either end of an axis:
         xpad = mkpad(ax.get_xlim(), xpad)
         ypad = mkpad(ax.get_ylim(), ypad)
+
+        # if no limits are given, get the current axis limits.
         if ylims == None:
             ylims = ax.get_ylim()
         if xlims == None:
             xlims = ax.get_xlim()
+
+        # add the created pads to the axis limits, extending them.
         ylims = [limit + ypad[i] for i, limit in enumerate(ylims)]
         xlims = [limit + xpad[i] for i, limit in enumerate(xlims)]
+
+        # set the new padded limits.
         ax.set_ylim(ylims)
         ax.set_xlim(xlims)
 
+        # return new limits:
         return xlims, ylims
 
-    # plot limits:
+    # if plot limits aren't given (if they are, use them instead):
     if ylims == None:
+
+        # if no data is given, set the limits as current axis limits:
         if isinstance(y, type(None)):
             ylims = ax.get_ylim()
+
+        # or else if data is given...
         else:
-            # get the largest of the current limits & given data:
+            # get the largest of the current limits & given data
+            # (e.g. b/c want to expand axis lims if there is data
+            # outside of them):
             ymax = max(max(y), max(ax.get_ylim()))
-            # '     ' smallest '                                ':         
+            # do the same check for the data min:         
             ymin = min(min(y), min(ax.get_ylim()))
-            # reverses axes if told to:
+            # designates new limits and reverses axes if told to:
             ylims = [ymin, ymax] if not reverse_y else [ymax, ymin]
 
-    # same for x lims:
+    # same as above, but for x axis:
     if xlims == None:
         if isinstance(x, type(None)):
             xlims = ax.get_xlim()
@@ -1006,20 +1085,68 @@ def expand_lims(ax, x=None, y=None, xlims=None, ylims=None, reverse_x=False, rev
             xmin = min(min(x), min(ax.get_xlim()))
             xlims = [xmin, xmax] if not reverse_x else [xmax, xmin]
 
-    # Set limits, expanding to the extent that encompasses the full dataset, or else staying at the current
-    # limits if they already encompass all data.
+    # Set limits, expanding to the extent that encompasses the full dataset, 
+    # or else staying at the current limits if they already encompass all data.
     ax.set_ylim(ylims)
     ax.set_xlim(xlims)
 
+    # return new limits:
     return xlims, ylims
 
 def mkpad(lims, percent):
 
+    """
+     pads are some percentage of the given limit.
+    
+     -- 0% would add no pad
+     -- 50% (0.5) would create a pad that is 50% of 
+        the given limit value.
+    
+     pads are meant to be added to the given limit
+     after their creation here.
+    """
+
+    # creates a list of pads (one element for either end of axis).
     pads = []
     for lim in lims:
+        # if on the larger end of axis, create pads that will further
+        # extend this end of the axis when added:
         if lim == max(lims):
             pads.append(abs(lim)*percent)
+        # or else if on the other end of the axis, create pads that will
+        # extend towards the other (negative) direction.
         elif lim == min(lims):
             pads.append(-abs(lim)*percent)
  
     return pads
+
+def convert_name(aname):
+
+    # convert a given name (string) into a (matplotlib) plot friendly name.
+
+    # If code is using TIGS photometry name convetions, then that data using 'TMASS' not 2MASS, so...
+    if 'TMASS' in aname:
+        aname = aname.replace('TMASS', '2MASS')
+    if aname == '2MASS_K':
+        aname = '2MASS_Ks'
+
+    # Keys = input names and items are the conversions:
+    name_dictionary = {'2MASS_J': 'J',
+                       '2MASS_Ks': 'K_s',
+                       'Tycho_B': 'B_T',
+                       'Tycho_V': 'V_T'
+                       }
+
+    try:
+        return name_dictionary[aname]
+
+    except KeyError:
+        # given name is not simply one of the keys...so it is trickier to convert or doesn't have a defined conversion.
+
+        # condition to handle case where naem is a mathematical expression of valid names (e.g. 2MASS_J-2MASS_Ks)        
+        for key in name_dictionary.keys():
+            if key in aname:
+                # replace the occurence of the name that should be converted:
+                aname = aname.replace(key, name_dictionary[key])
+
+        return aname

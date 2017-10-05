@@ -67,6 +67,7 @@ def make_eeps_isos(runname, basic=False, fsps=False, custom_path=None):
         blend_ind = ['M_' in x for x in initial_eeps_list]
         blend_list = [x for x, y in zip(initial_eeps_list, blend_ind) if y]
         blend_list.sort()
+        print(blend_list)
         for i, filename in enumerate(blend_list[::2]):
             os.chdir(os.environ['MIST_CODE_DIR'])
             make_blend_input_file.make_blend_input_file(runname_format, filename, blend_list[i*2+1], custom_path = custom_path)

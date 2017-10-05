@@ -95,7 +95,7 @@ def get_isocmdf(grid_dir, feh, vvcrit, Av = 0.0, gravdark_i=0.0, exttag=None, cr
         else:
             isofile = glob.glob(os.path.join(grid_dir, 'isochrones/*{:s}_basic.iso'.format(exttag)))
             if len(isofile) == 0:
-                isofile = glob.glob(os.path.join(grid_dir, 'isochrones/*full.iso'))
+                isofile = glob.glob(os.path.join(grid_dir, 'isochrones/*{:s}_full.iso'.format(exttag)))
 
             assert len(isofile) == 1, "Got {:d}, rather than one .iso file in {:s}.".format(len(isofile), grid_dir)
             filename = isofile[0]
@@ -109,10 +109,10 @@ def get_isocmdf(grid_dir, feh, vvcrit, Av = 0.0, gravdark_i=0.0, exttag=None, cr
 
     else:
         # If non-existent in the default grid, attempt interpolation.
-        interpiso_fn = isointerp.call_isointerp(vvcrit, feh)
+        interpiso_fn = isointerp.call_isointerp(vvcrit, feh, exttag=exttag)
         filename = interpiso_fn
         if create_cmd:
-            cmdfile = isomist.createcmd(interpiso_fn, Av = Av, gravdark_i = gravdark_i)
+            cmdfile = isomist.createcmd(interpiso_fn, Av = Av, gravdark_i = gravdark_i, exttag = exttag)
             filename = cmdfile
 
         return filename

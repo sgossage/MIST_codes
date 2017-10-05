@@ -3,7 +3,7 @@ import os
 import numpy as np
 from pathing import isopath
 
-def call_isointerp(vvcrit, feh, cov=None, custom_isopath = None):
+def call_isointerp(vvcrit, feh, cov=None, custom_isopath = None, exttag = None):
 
     """
         In order to get closer to a calcsfh best fit, may need to interpolate available MIST isochrones. A. Dotter's
@@ -16,7 +16,7 @@ def call_isointerp(vvcrit, feh, cov=None, custom_isopath = None):
 
     """
     # Exit if the metallicity should already exist (not a great security algorithm atm?):
-    feh_masterlist = [-0.30, -0.15, 0.00, 0.15, 0.30]
+    feh_masterlist = [-0.75, -0.60, -0.45, -0.30, -0.15, 0.00, 0.15, 0.30, 0.45]
     if feh in feh_masterlist and custom_isopath == None:
         print('Metallicity value given already exists; no need to interpolate.')
         return
@@ -26,7 +26,7 @@ def call_isointerp(vvcrit, feh, cov=None, custom_isopath = None):
 
     # Get the available isochrone files. These are stored in /n/conroyfs1/.../output/:
     if custom_isopath == None:
-        isofiles = isopath(vvcrit, cov)
+        isofiles = isopath(vvcrit, cov, exttag=exttag)
     else:
         isofiles = glob.glob(os.path.join(custom_isopath, '*.iso'))
 
@@ -45,9 +45,9 @@ def call_isointerp(vvcrit, feh, cov=None, custom_isopath = None):
 
     # We will sort the dictionary keys (file names or feh strings) by their values (feh values):
     isofname_list = sorted(isodict, key=isodict.__getitem__)
-    print(isofname_list)
+    #print(isofname_list)
     fehstr_list = sorted(fehdict, key=fehdict.__getitem__)
-    print(fehstr_list)
+    #print(fehstr_list)
     filestr_lines = [(fehstr_list[i], isofname_list[i]) for i in range(len(feh_masterlist))]
 
     # isofiles is now a list of the .iso files available at the given vvcrit value.
@@ -83,12 +83,18 @@ def call_isointerp(vvcrit, feh, cov=None, custom_isopath = None):
     os.chdir(isocodedir)
 
     # Make the output file name; using the path to interpolated files relevant to my system:
-    interpolation_dir = '/home/seth/Research/MIST/MISTout/MIST_v1.0/output/interpolations'
+    interpolation_dir = os.path.join(os.environ['STORE_DIR'], 'MIST_v1.0', 'output', 'interpolations')#'/home/seth/Research/MIST/MISTout/MIST_v1.0/output/interpolations'
 
     if feh >= 0.00:
-        output_fname = 'MIST_v1.0_feh_p{:.2f}_afe_p0.0_vvcrit{:.1f}_interp.iso'.format(feh, vvcrit)
+        if exttag is not None:
+            output_fname = 'MIST_v1.0_feh_p{:.2f}_afe_p0.0_vvcrit{:.1f}_{:s}_interp.iso'.format(feh, vvcrit, exttag)
+        else:
+            output_fname = 'MIST_v1.0_feh_p{:.2f}_afe_p0.0_vvcrit{:.1f}_interp.iso'.format(feh, vvcrit)
     elif feh < 0.00:
-        output_fname = 'MIST_v1.0_feh_m{:.2f}_afe_p0.0_vvcrit{:.1f}_interp.iso'.format(abs(feh), vvcrit)
+        if exttag is not None:
+            output_fname = 'MIST_v1.0_feh_m{:.2f}_afe_p0.0_vvcrit{:.1f}_{:s}_interp.iso'.format(abs(feh), vvcrit, exttag)
+        else:
+            output_fname = 'MIST_v1.0_feh_m{:.2f}_afe_p0.0_vvcrit{:.1f}_interp.iso'.format(abs(feh), vvcrit)
 
     output_pathname = os.path.join(interpolation_dir, output_fname)    
 

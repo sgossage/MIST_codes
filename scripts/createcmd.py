@@ -85,7 +85,7 @@ def createcmd(isoobj, photstr='UBVRIplus', feh= None, vvcrit = None, cov = None,
                 pass
 
         # For each .iso file, run the iso code:
-        print filename
+        #print filename
         if Av == None:
             #agemax = np.amax(np.genfromtxt(filename, usecols=(1,), skip_header = 11))
             #agemin = np.amin(np.genfromtxt(filename, usecols=(1,), skip_header = 11))
