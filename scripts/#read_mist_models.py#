@@ -334,13 +334,13 @@ class ISOCMD:
         print("Using log10 age = {:.2f}.".format(self.isocmds[age_ind]['log10_isochrone_age_yr'][0]))
         lage = self.isocmds[age_ind]['log10_isochrone_age_yr'][0]
 
-        # For labeling age in potential plots:
+        # For labeling age in potential plots, :
         if lage >= 9.0:
             lage_str = "{:.1f} Gyr".format((10**lage)/(10.**9))
         if 6.0 <= lage < 9.0:
             lage_str = "{:.1f} Myr".format((10**lage)/(10.**6))
 
-        # creates a plot label for the isochrone.
+        # Creates a plot label for the isochrone.
         if exttag != None:
             self.lbl = 'MIST({:s}): age = {:s}, [Fe/H] = {:.2f}, '.format(exttag, lage_str, self.feh) + \
                       r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
@@ -348,17 +348,17 @@ class ISOCMD:
             self.lbl = 'MIST: age = {:s}, [Fe/H] = {:.2f}, '.format(lage_str, self.feh) + \
                        r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
 
+        # datadict holds all .iso file data for the specified isochrone. Organize it into desired x, y here:
         datdict = self.get_data([x_name, y_name], phasemask, age_ind=age_ind, dmod=dmod)
         self.x_name, self.y_name = datdict.keys()
         self.x, self.y = datdict.values()
 
-        # sets labels:
+        # sets labels if given an axis...not necessary?:
         if ax is not None:
             ax.set_ylabel(u"${:s}$".format(self.y_name), rotation=90)
             ax.set_xlabel(u"${:s}$".format(self.x_name))
             ax.set_xlim([x.max()+0.05, x.min()-0.05])
             ax.set_ylim([y.max()+0.2, y.min()-0.2])
-            #ax.set_title(u'MIST Isochrones: ${:s}$ vs. ${:s}$'.format(self.y_name, self.x_name))
 
         # stellar masses (not needed?):
         # self.init_masses = self.isocmds[age_ind]['initial_mass']
