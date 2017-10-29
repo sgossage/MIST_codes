@@ -34,14 +34,15 @@ def createcmd(iso_filename, photstr='UBVRIplus', Av=None, gravdark_i = 0.0):
     out_fname = filename + '.cmd'
     # check if the .cmd file already exists; it may not need to be recreated:
     if os.path.isfile(out_fname):
-        print("The .cmd file \"{:s}\" already exists...".format(out_fname))
+        #print("The .cmd file \"{:s}\" already exists...".format(out_fname))
         with open(out_fname, 'r') as cmdf:
             cmdflines = cmdf.readlines()
         # Check if extinction in the currently existing .cmd file matches desired value:
         if "{:.3f}".format(float(cmdflines[8].split()[-1])) == "{:.3f}".format(Av):
-            print("Desired Av = {:.3f} matches existing Av = {:.3f}; the existing .cmd file will be used.".format(Av, float(cmdflines[8].split()[-1])))
+            #print("Desired Av = {:.3f} matches existing Av = {:.3f}; the existing .cmd file will be used.".format(Av, float(cmdflines[8].split()[-1])))
+            pass
         else:
-            print("Desired Av = {:.3f} does not match existing Av = {:.3f}; creating a new .cmd file...".format(Av, float(cmdflines[8].split()[-1])))
+            #print("Desired Av = {:.3f} does not match existing Av = {:.3f}; creating a new .cmd file...".format(Av, float(cmdflines[8].split()[-1])))
             os.system('./make_cmd ' + photstr + ' ' + filename + ' ' + str(Av))
 
     else:

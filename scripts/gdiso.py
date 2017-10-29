@@ -123,7 +123,7 @@ def rw_gdiso(isoobj, filename, angle):
     outfname = filename.split('.iso')[0] + '_gdark{:.1f}.iso'.format(angle_deg)
     # Check if the .iso file already exists:
     if os.path.isfile(outfname):
-        print("The .iso file \"{:s}\" already exists and will be used.".format(outfname))
+        #print("The .iso file \"{:s}\" already exists and will be used.".format(outfname))
         return outfname
     # If it doesn't, create it:
     else:
@@ -133,7 +133,7 @@ def rw_gdiso(isoobj, filename, angle):
 
         # organizing iso data blocks:
         isoblocks = []
-        print('Organizing iso data...')
+        #print('Organizing iso data...')
         for i in range(numisos):
             block = []
             numrows = len(isos[i]['EEP'][:])
@@ -154,7 +154,7 @@ def rw_gdiso(isoobj, filename, angle):
             isoblocks.append(block)
         
         # write data to .iso file in format similar to A. Dotter's iso code.        
-        print("Writing {:s}...".format(outfname))
+        #print("Writing {:s}...".format(outfname))
         with open(outfname, 'w+') as outf:
             outf.write('# MIST version number  = {:s}\n'.format(isoobj.version['MIST']))
             outf.write('# MIST revision number = {:s}\n'.format(isoobj.version['MESA']))
@@ -207,7 +207,7 @@ def rw_gdeep(eep, filename, angle):
     outfname = filename.split('.track.eep')[0] + '_gdark{:.1f}.track.eep'.format(angle_deg)
     # Check if the .iso file already exists:
     if os.path.isfile(outfname):
-        print("The .iso file \"{:s}\" already exists and will be used.".format(outfname))
+        #print("The .iso file \"{:s}\" already exists and will be used.".format(outfname))
         return outfname
     # If it doesn't, create it:
     else:
@@ -218,7 +218,7 @@ def rw_gdeep(eep, filename, angle):
 
         # organizing iso data blocks:
         trackblock = []
-        print('Organizing track data...')
+        #print('Organizing track data...')
         numrows = numeeps
         track = copy(gdtrack(eepobj.eeps, angle))
 
@@ -235,7 +235,7 @@ def rw_gdeep(eep, filename, angle):
             origcont = origf.readlines()[0:10]
         
         # write data to .iso file in format similar to A. Dotter's iso code.        
-        print("Writing {:s}...".format(outfname))
+        #print("Writing {:s}...".format(outfname))
         with open(outfname, 'w+') as outf:
             for line in origcont:
                 outf.write(line)

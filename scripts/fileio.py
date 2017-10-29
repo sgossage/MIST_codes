@@ -8,7 +8,7 @@ import createcmd as ccmd
 import isomist
 from gdiso import *
 
-def get_fn(feh, vvcrit, mode, mass=0.0, ebv = 0.0, gravdark_i = 0.0, exttag=None):
+def get_fn(feh, vvcrit, mode, mass=0.0, ebv = 0.0, gravdark_i = 0.0, exttag=None, version='1.0'):
     """
         Gets the filename, given a [Fe/H] value & a v/vcrit value. Assumes that the environment variable 'STORE_DIR' is set
         and that the grid names follow feh_pX.XX_afe_0.0_vvcritX.X for their name format.
@@ -23,7 +23,7 @@ def get_fn(feh, vvcrit, mode, mass=0.0, ebv = 0.0, gravdark_i = 0.0, exttag=None
                     (a str, & '_' is added by this code itself).
     """
 
-    store_dir =  os.path.join(os.environ['STORE_DIR'], 'MIST_v1.0', 'output')
+    store_dir =  os.path.join(os.environ['STORE_DIR'], 'MIST_v{:s}'.format(version), 'output')
     if feh < 0.0:
         fehstr = 'm{:.2f}'.format(abs(feh))
     else:

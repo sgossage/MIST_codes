@@ -32,7 +32,7 @@ class ISO:
     
     """
     
-    def __init__(self, feh = 0.00, vvcrit = 0.0, filename = None, gravdark_i = 0.0, exttag = None, verbose=True, read=True):
+    def __init__(self, feh = 0.00, vvcrit = 0.0, filename = None, gravdark_i = 0.0, exttag = None, verbose=True, read=True, version='1.0'):
     
         """
         
@@ -60,7 +60,7 @@ class ISO:
         if filename != None:
             self.filename = filename
         else:
-            filename = get_fn(feh, vvcrit, mode='iso', gravdark_i = gravdark_i, exttag=exttag)
+            filename = get_fn(feh, vvcrit, mode='iso', gravdark_i = gravdark_i, exttag = exttag, version = version)
             self.filename = filename
 
         if verbose:
@@ -149,7 +149,7 @@ class ISOCMD:
     
     """
     
-    def __init__(self, feh=0.00, vvcrit=0.0, ebv=0.0, gravdark_i=0.0, exttag=None, filename=None, verbose=True):
+    def __init__(self, feh=0.00, vvcrit=0.0, ebv=0.0, gravdark_i=0.0, exttag=None, filename=None, verbose=True, version = '1.0'):
     
         """
         
@@ -176,7 +176,7 @@ class ISOCMD:
         
         """
         Av = 3.1*ebv
-        iso_filename = ISO(feh = feh, vvcrit = vvcrit, gravdark_i = gravdark_i, exttag = exttag, read=False).filename
+        iso_filename = ISO(feh = feh, vvcrit = vvcrit, gravdark_i = gravdark_i, exttag = exttag, read=False, version = version).filename
         self.filename = isomist.createcmd(iso_filename, Av = Av, gravdark_i = gravdark_i)
         self.exttag = exttag
         self.feh = feh
@@ -186,8 +186,9 @@ class ISOCMD:
  
         if verbose:
             print('Reading in: ' + self.filename)
-            
+        
         self.version, self.photo_sys, self.abun, self.Av_extinction, self.rot, self.ages, self.num_ages, self.hdr_list, self.isocmds = self.read_isocmd_file()
+        print("Created an ISOCMD instance with photoemetric system {:s}, [Fe/H] = {:f}, Av = {:f}, V/Vc = {:.1f}, inclination angle = {:.1f}".format(self.photo_sys, self.feh, self.Av_extinction, self.rot, self.gdark_i))
     
     def read_isocmd_file(self):
 
@@ -334,13 +335,13 @@ class ISOCMD:
         print("Using log10 age = {:.2f}.".format(self.isocmds[age_ind]['log10_isochrone_age_yr'][0]))
         lage = self.isocmds[age_ind]['log10_isochrone_age_yr'][0]
 
-        # For labeling age in potential plots:
+        # For labeling age in potential plots, :
         if lage >= 9.0:
             lage_str = "{:.1f} Gyr".format((10**lage)/(10.**9))
         if 6.0 <= lage < 9.0:
             lage_str = "{:.1f} Myr".format((10**lage)/(10.**6))
 
-        # creates a plot label for the isochrone.
+        # Creates a plot label for the isochrone.
         if exttag != None:
             self.lbl = 'MIST({:s}): age = {:s}, [Fe/H] = {:.2f}, '.format(exttag, lage_str, self.feh) + \
                       r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
@@ -348,20 +349,22 @@ class ISOCMD:
             self.lbl = 'MIST: age = {:s}, [Fe/H] = {:.2f}, '.format(lage_str, self.feh) + \
                        r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
 
+        # datadict holds all .iso file data for the specified isochrone. Organize it into desired x, y here:
         datdict = self.get_data([x_name, y_name], phasemask, age_ind=age_ind, dmod=dmod)
         self.x_name, self.y_name = datdict.keys()
         self.x, self.y = datdict.values()
 
-        # sets labels:
+        # sets labels if given an axis...not necessary?:
         if ax is not None:
             ax.set_ylabel(u"${:s}$".format(self.y_name), rotation=90)
             ax.set_xlabel(u"${:s}$".format(self.x_name))
             ax.set_xlim([x.max()+0.05, x.min()-0.05])
             ax.set_ylim([y.max()+0.2, y.min()-0.2])
-            #ax.set_title(u'MIST Isochrones: ${:s}$ vs. ${:s}$'.format(self.y_name, self.x_name))
 
         # stellar masses (not needed?):
         # self.init_masses = self.isocmds[age_ind]['initial_mass']
+
+        print("Set data for {:s}".format(self.lbl))
 
         return #x, y, init_masses, phases
 
@@ -415,7 +418,7 @@ class ISOCMD:
         # Plot a CMD of red vs. blue - red:
         if  shade > 1.0 or shade < 0.0:
             shade = 0.0
-            print("Warning: shade must be between 0 and 1.")
+            print("Warning: shade should be between 0 and 1.")
 
         # Alter shade of line:
         if shade != None:
@@ -454,8 +457,6 @@ class ISOCMD:
 
         ax.set_ylabel(u"${:s}$".format(self.y_name))
         ax.set_xlabel(u"${:s}$".format(self.x_name))
-        #ax.set_xlim(self.xextent)
-        #ax.set_ylim(self.yextent)
         ax.set_title(u'MIST Isochrones: ${:s}$ vs. ${:s}$'.format(self.y_name, self.x_name))
 
         if legloc != None:
