@@ -26,7 +26,7 @@ def isopath(vvcrit=None, cov=None, exttag=None):
         search_str += '_{:s}'.format(exttag)
 
     search_str = search_str + '*full.iso'
-
+    
     if cov:
         if exttag is not None:
             pathtoisos = os.path.join(storedir, '*_vvcrit{:.1f}_cov{.3f}_{:s}/isochrones/{:s}'.format(vvcrit, cov, exttag, search_str))
@@ -37,9 +37,9 @@ def isopath(vvcrit=None, cov=None, exttag=None):
             pathtoisos = os.path.join(storedir, '*_vvcrit{:.1f}_{:s}/isochrones/{:s}'.format(vvcrit, exttag, search_str))
         else:
             pathtoisos = os.path.join(storedir, '*_vvcrit{:.1f}/isochrones/{:s}'.format(vvcrit, search_str))
-    #print(pathtoisos)
+    print(pathtoisos)
     # Returns a list of paths to each .iso file found in path structure above:
     isofilepaths = glob.glob(pathtoisos)
-    #print(isofilepaths)
+    print(isofilepaths)
     
     return isofilepaths

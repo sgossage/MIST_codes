@@ -129,7 +129,9 @@ def get_masstrackeepf(grid_dir, mass):
         for i in range(5 - len(mass_string)):
             mass_string = mass_string + '0'
 
+    print("Looking in {:s} for a {:s} Msol model.".format(grid_dir, mass_string))
     filelist = glob.glob(os.path.join(grid_dir, 'eeps/*{:s}M.track.eep'.format(mass_string)))
+    print(filelist)
     if not filelist:
         print('No track.eep file was found for {:.1f} Msun.'.format(mass))
         return filelist

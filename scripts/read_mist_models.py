@@ -322,9 +322,20 @@ class ISOCMD:
 
         return data_dict
 
-    def set_isodata(self, lage, x_name, y_name, dmod=0.0, ax=None, phasemask=[], x_to_ymx=True, geneva_on=False):
+    def set_isodata(self, lage, x_name, y_name, dmod=0.0, ax=None, phasemask=[], 
+                    x_to_ymx=True, geneva_on=False, labels=['exttag', 'age', 'feh', 'vvc', 'inc'], 
+                    texts=None):
         """
             Given a log10 age, get the data desired to plot the CMD or HRD
+           
+            Control labeling of isochrones:
+
+                Use the "labels" argument; this should be a list, valid elements are:
+                    + exttag, age, feh, vvc, inc
+                Equate this argument to a list containing either of the above elements as a string, e.g.
+                    labels = ['feh']
+                Neglect any one or more of the elements to exclude it from the label.
+            
         """
 
         exttag = self.exttag
@@ -342,12 +353,42 @@ class ISOCMD:
             lage_str = "{:.1f} Myr".format((10**lage)/(10.**6))
 
         # Creates a plot label for the isochrone.
-        if exttag != None:
-            self.lbl = 'MIST({:s}): age = {:s}, [Fe/H] = {:.2f}, '.format(exttag, lage_str, self.feh) + \
+        lbl = 'MIST({:s}): age = {:s}, [Fe/H] = {:.2f}, '.format(exttag, lage_str, self.feh) + \
                       r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
+        if 'exttag' not in labels and exttag != None:
+            lbl = lbl.replace('({:s})'.format(exttag), '')
+        if 'age' not in labels:
+            lbl = lbl.replace('age = {:s}, '.format(lage_str), '')
+        if 'feh' not in labels:
+            lbl = lbl.replace('[Fe/H] = {:.2f}, '.format(self.feh), '')
+        if 'vvc' not in labels:
+            lbl = lbl.replace(r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} '.format(self.rot), '')
+        if 'inc' not in labels:
+            lbl = lbl.replace('(i = {:.1f})'.format(self.gdark_i), '')
+        # check for cleanup of leftover comma and colon:
+        lbl = lbl.replace(', (', ' (')
+        lbl = lbl.replace(': (', ' (')
+        self.lbl = lbl
+        
+        # for creating text labels:
+        if texts is not None:
+            textlbl = ''
+            for ele in texts:
+                if ele == 'age':
+                    textlbl += 'age = {:s}\n'.format(lage_str)
+                elif ele =='feh' in texts:
+                    textlbl += '[Fe/H] = {:.2f}\n'.format(self.feh)
+                elif ele == 'vvc' in texts:
+                    textlbl += r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} '.format(self.rot)
+                elif ele == 'inc' in texts:
+                    textlbl += 'i = {:.1f}'.format(self.gdark_i)
+                else:
+                    textlbl += '{:s}\n'.format(ele)
+ 
+            self.txtlbl = textlbl
+
         else:
-            self.lbl = 'MIST: age = {:s}, [Fe/H] = {:.2f}, '.format(lage_str, self.feh) + \
-                       r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
+            self.txtlbl = None 
 
         # datadict holds all .iso file data for the specified isochrone. Organize it into desired x, y here:
         datdict = self.get_data([x_name, y_name], phasemask, age_ind=age_ind, dmod=dmod)
@@ -428,6 +469,8 @@ class ISOCMD:
         # Add (predefined) label:
         if label == True:
             kwargs['label'] = self.lbl
+            if self.txtlbl != None:
+                ax.annotate(self.txtlbl, xy=(0.05, 0.90), xycoords='axes fraction')
 
         # line width = 1
         kwargs['lw'] = 1
@@ -589,7 +632,7 @@ class EEP:
         		
     def plot_HR(self, fignum=0, phases=[], phasecolor=[], phasemask = [], ax = None, shade = 0.0, cbar_valname = None, masslbl=True, vvclbl=False,
                 title=None, xlims = None, ylims = None, agemarks = None, legloc = None, label=False, showplt = False, savename = None, xlabel=True,
-                ylabel = True, geneva_on=False, MIST_on = True, setlim=False, **kwargs):
+                ylabel = True, geneva_on=False, geneva_lbl=False, MIST_on = True, setlim=False, **kwargs):
         
         """
 
@@ -614,6 +657,8 @@ class EEP:
         
         """
 
+        if phasemask == 'allbutms':
+            phasemask = [-1,2,3,4,5,6,9]
         self.phasemask = phasemask
 
         if  shade > 1.0 or shade < 0.0:
@@ -665,10 +710,13 @@ class EEP:
     
         if label == True:
             kwargs['label'] = self.lbl
+        elif isinstance(label, str):
+            print(label)
+            kwargs['label'] = label
 
         # If supplied, create a color the lines by a third value:
         if isinstance(cbar_valname, str):
-            ax, lc = color_lineby_z(x, y, z, cbarmin, cbarmax, ax=ax, alpha=kwargs['alpha'])
+            ax, lc = color_lineby_z(x, y, z, cbarmin, cbarmax, ax=ax, **kwargs)#alpha=kwargs['alpha'])
             ax.axis('auto')
             #ax.axis([max(x)+0.2, min(x)-0.2, min(y)-0.2, max(y)+0.2])
 
@@ -719,11 +767,11 @@ class EEP:
         if geneva_on:
             try:
                 geneva_star = rg.star(vvc = self.rot, minit = self.minit)
-                genx, geny, lc = geneva_star.plot_HR(ax = ax, label = True, shade = shade, ls = '--')
+                genx, geny, lc = geneva_star.plot_HR(ax = ax, label = geneva_lbl, shade = shade, ls = '--')
 
             # in case the Geneva star is not recoverable:
             except IOError:
-                print('Geneva star: v/vcrit = {:.1f}, Mass = {:.2f}'.format(self.rot, self.minit))
+                print('Failed to create Geneva star: v/vcrit = {:.1f}, Mass = {:.2f}'.format(self.rot, self.minit))
 
         ax.set_xlim(curr_xlims)
         ax.set_ylim(curr_ylims)
@@ -772,7 +820,7 @@ class EEP:
             ax.set_title(title)
 
         if legloc != None:
-            plt.legend(loc = legloc, prop={'size':8})
+            ax.legend(loc = legloc, prop={'size':8})
 
         if savename != None:
             plt.savefig(savename, dpi=600)

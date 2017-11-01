@@ -44,7 +44,7 @@ class star:
             + minit (float): Mass of the model; also a float; will be truncated to 2 digit precision.
     """
 
-    def __init__(self, fname=None, vvc=None, minit=None):
+    def __init__(self, fname=None, vvc=None, minit=None, labelstyle='full'):
         # If given a filename, use it:
         if fname is not None:
             # extract the v/vcrit and initial model mass from the filename:
@@ -101,6 +101,10 @@ class star:
 
             # Resultant file name:
             self.fname = os.path.join(fpath, 'z0.014','tracks','dense','M{:s}Z14V{:s}.dat'.format(minitstr, vvcstr))
+            if os.path.isfile(self.fname):
+                pass
+            else:
+                print('Warning: the file \"{:s}\" for this Geneva model does not exist.'.format(self.fname))
 
         # Call read_file() to extract model data table and header labels:
         self.hdr_list, self.hdr_units, self.data = self.read_file()
@@ -108,8 +112,11 @@ class star:
         self.df = pd.DataFrame(self.data, columns=self.hdr_list)
 
         # Label for plots:
-        self.lbl='Geneva: M = {:.2f}'.format(self.minit)+r' $M_{\odot}$, $\Omega/\Omega_c$'+' = {:.1f}'.format(self.vvc)
-
+        if labelstyle == 'full':
+            self.lbl = 'Geneva: M = {:.2f}'.format(self.minit)+r' $M_{\odot}$, $\Omega/\Omega_c$'+' = {:.1f}'.format(self.vvc)
+        elif labelstyle == 'simple':
+            self.lbl = 'Geneva'
+    
     def read_file(self):
         
         """
@@ -160,8 +167,10 @@ class star:
             lc = plt.cm.Dark2(shade)
             kwargs['c'] = lc
 
-        if label:
+        if label == True:
             kwargs['label'] = self.lbl
+        elif isinstance(label, str):
+            kwargs['label'] = label
 
         base_line, = ax.plot(genx, geny, **kwargs)
 
