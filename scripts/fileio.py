@@ -24,6 +24,15 @@ def get_fn(feh, vvcrit, mode, mass=0.0, ebv = 0.0, gravdark_i = 0.0, exttag=None
     """
 
     store_dir =  os.path.join(os.environ['STORE_DIR'], 'MIST_v{:s}'.format(version), 'output')
+    if os.path.isdir(store_dir):
+        pass
+    else:
+        print("{:s} does not exist. Trying alternate path format.".format(store_dir))
+        store_dir = os.path.join(os.environ['STORE_DIR'], 'MIST_{:s}'.format(version), 'output')
+        if not os.path.isdir(store_dir):
+            print("{:s} does not exist.".format(store_dir))
+            return
+
     if feh < 0.0:
         fehstr = 'm{:.2f}'.format(abs(feh))
     else:

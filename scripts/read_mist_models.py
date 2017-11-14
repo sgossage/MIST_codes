@@ -61,6 +61,7 @@ class ISO:
             self.filename = filename
         else:
             filename = get_fn(feh, vvcrit, mode='iso', gravdark_i = gravdark_i, exttag = exttag, version = version)
+            print(filename)
             self.filename = filename
 
         if verbose:
@@ -176,8 +177,17 @@ class ISOCMD:
         
         """
         Av = 3.1*ebv
-        iso_filename = ISO(feh = feh, vvcrit = vvcrit, gravdark_i = gravdark_i, exttag = exttag, read=False, version = version).filename
-        self.filename = isomist.createcmd(iso_filename, Av = Av, gravdark_i = gravdark_i)
+        if filename != None:
+            if '.cmd' not in filename:
+                iso_filename = ISO(feh = feh, vvcrit = vvcrit, gravdark_i = gravdark_i, exttag = exttag, read=False, filename=filename, version = version).filename
+                self.filename = isomist.createcmd(iso_filename, Av = Av, gravdark_i = gravdark_i)
+            else:
+                self.filename = filename
+        else:
+            iso_filename = ISO(feh = feh, vvcrit = vvcrit, gravdark_i = gravdark_i, exttag = exttag, read=False, filename=filename, version = version).filename
+            self.filename = isomist.createcmd(iso_filename, Av = Av, gravdark_i = gravdark_i)
+
+
         self.exttag = exttag
         self.feh = feh
         self.gdark_i = gravdark_i
@@ -1190,7 +1200,9 @@ def convert_name(aname):
                        'Tycho_B': 'B_T',
                        'Tycho_V': 'V_T',
                        'Bessell_B': 'B',
-                       'Bessell_V': 'V'
+                       'Bessell_V': 'V',
+                       'log_Teff': 'log T_{eff}',
+                       'log_L': 'log L/L_{\odot}'
                        }
 
     try:
