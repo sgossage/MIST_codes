@@ -33,6 +33,7 @@ def gen_summary(rawdirname):
             # try to get the .e file for a resumed run if possible.
             listerrfiles.append(glob.glob(os.path.join(trackdir, '*re.e'))[0])
         except IndexError:
+            print(trackdir)
             # no *re.e file found.
             listerrfiles.append(glob.glob(os.path.join(trackdir, '*.e'))[0])
         try:

@@ -42,8 +42,8 @@ def make_slurm_sh(inlistname, inlistdir, runbasefile, partition):
         # Originally 30:00:00, added 20 hrs
         replaced_contents = replaced_contents.replace('<<RUNTIME>>', '50:00:00')
     else:
-        # Originally 120:00:00, added 20 hrs
-        replaced_contents = replaced_contents.replace('<<RUNTIME>>', '170:00:00')
+        # Originally 120:00:00, added 20 hrs --> newest: just limit to 3.5 days.
+        replaced_contents = replaced_contents.replace('<<RUNTIME>>', '84:00:00')#'170:00:00')
     runfile = runname+'_run.sh'
 
     #Write the new shell script

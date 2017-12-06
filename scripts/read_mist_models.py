@@ -19,7 +19,11 @@ from gdiso import *
 import read_geneva as rg
 import isomist
 
+params = {'axes.labelsize': 20,'axes.titlesize':20, 'text.fontsize': 14, 'xtick.labelsize': 14, 'ytick.labelsize': 14}
+mpl.rcParams.update(params)
+
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -334,7 +338,7 @@ class ISOCMD:
 
     def set_isodata(self, lage, x_name, y_name, dmod=0.0, ax=None, phasemask=[], 
                     x_to_ymx=True, geneva_on=False, labels=['exttag', 'age', 'feh', 'vvc', 'inc'], 
-                    texts=None):
+                    texts=None, lgdlbl=None):
         """
             Given a log10 age, get the data desired to plot the CMD or HRD
            
@@ -361,42 +365,55 @@ class ISOCMD:
             lage_str = "{:.1f} Gyr".format((10**lage)/(10.**9))
         if 6.0 <= lage < 9.0:
             lage_str = "{:.1f} Myr".format((10**lage)/(10.**6))
-
-        # Creates a plot label for the isochrone.
-        lbl = 'MIST({:s}): age = {:s}, [Fe/H] = {:.2f}, '.format(exttag, lage_str, self.feh) + \
-                      r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
-        if 'exttag' not in labels and exttag != None:
-            lbl = lbl.replace('({:s})'.format(exttag), '')
-        if 'age' not in labels:
-            lbl = lbl.replace('age = {:s}, '.format(lage_str), '')
-        if 'feh' not in labels:
-            lbl = lbl.replace('[Fe/H] = {:.2f}, '.format(self.feh), '')
-        if 'vvc' not in labels:
-            lbl = lbl.replace(r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} '.format(self.rot), '')
-        if 'inc' not in labels:
-            lbl = lbl.replace('(i = {:.1f})'.format(self.gdark_i), '')
-        # check for cleanup of leftover comma and colon:
-        lbl = lbl.replace(', (', ' (')
-        lbl = lbl.replace(': (', ' (')
-        self.lbl = lbl
+  
+        # extra tag conversions (to less eye soring versions):
+        if 'mlta' in exttag:
+            exttag = r"$\alpha_{MLT}=$"+"{:s}".format(exttag.split('mlta')[-1]) 
+   
+        # Creates a plot (legend) label for the isochrone.
+        if lgdlbl == None:
+            lbl = 'MIST({:s}): age = {:s}, [Fe/H] = {:.2f}, '.format(exttag, lage_str, self.feh) + \
+                          r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
+            if 'exttag' not in labels and exttag != None:
+                lbl = lbl.replace('({:s})'.format(exttag), '')
+            if 'age' not in labels:
+                lbl = lbl.replace('age = {:s}, '.format(lage_str), '')
+            if 'feh' not in labels:
+                lbl = lbl.replace('[Fe/H] = {:.2f}, '.format(self.feh), '')
+            if 'vvc' not in labels:
+                lbl = lbl.replace(r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} '.format(self.rot), '')
+            if 'inc' not in labels:
+                lbl = lbl.replace('(i = {:.1f})'.format(self.gdark_i), '')
+            # check for cleanup of leftover comma and colon:
+            lbl = lbl.replace(', (', ' (')
+            lbl = lbl.replace(': (', ' (')
+            if len(labels) == 1 and labels[0] == 'exttag':
+                lbl = lbl.replace(':', '')
+            self.lbl = lbl
+        else:
+            self.lbl = lgdlbl
         
         # for creating text labels:
         if texts is not None:
-            textlbl = ''
-            for ele in texts:
-                if ele == 'age':
-                    textlbl += 'age = {:s}\n'.format(lage_str)
-                elif ele =='feh' in texts:
-                    textlbl += '[Fe/H] = {:.2f}\n'.format(self.feh)
-                elif ele == 'vvc' in texts:
-                    textlbl += r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} '.format(self.rot)
-                elif ele == 'inc' in texts:
-                    textlbl += 'i = {:.1f}'.format(self.gdark_i)
-                else:
-                    textlbl += '{:s}\n'.format(ele)
- 
-            self.txtlbl = textlbl
+            if isinstance(texts, list):
+                textlbl = ''
+                for ele in texts:
+                    if ele == 'age':
+                        textlbl += 'age = {:s}\n'.format(lage_str)
+                    elif ele =='feh' in texts:
+                        textlbl += '[Fe/H] = {:.2f}\n'.format(self.feh)
+                    elif ele == 'vvc' in texts:
+                        textlbl += r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f}\n'.format(self.rot)
+                    elif ele == 'inc' in texts:
+                        textlbl += 'i = {:.1f}\n'.format(self.gdark_i)
+                    else:
+                        textlbl += '{:s}\n'.format(ele)
 
+                self.txtlbl = textlbl
+            
+            # if a ready made string is provided:
+            elif isinstance(texts, str):
+                self.txtlbl = texts
         else:
             self.txtlbl = None 
 
@@ -449,7 +466,7 @@ class ISOCMD:
 
         return base_line, sc
 
-    def isoplot(self, ax, masses=None, xlims=None, ylims=None, shade=0.0, legloc='best', label=False, legsize=8, setlim=False, **kwargs):
+    def isoplot(self, ax, masses=None, xlims=None, ylims=None, shade=None, legend=False, label=False, setlim=False, title=False, obs=None, **kwargs):
 
         """
             Plots CMD of a MIST isochrone object.
@@ -467,7 +484,7 @@ class ISOCMD:
         """
 
         # Plot a CMD of red vs. blue - red:
-        if  shade > 1.0 or shade < 0.0:
+        if  shade > 1.0 or shade < 0.0 and shade != None:
             shade = 0.0
             print("Warning: shade should be between 0 and 1.")
 
@@ -476,16 +493,33 @@ class ISOCMD:
             lc = plt.cm.Dark2(shade)
             kwargs['c'] = lc
 
-        # Add (predefined) label:
-        if label == True:
-            kwargs['label'] = self.lbl
+        # Add (predefined) text label:
+        if isinstance(label, bool):
+            if label == True:                
+                # handles text labels via AnchoredText (self.txtlbl set in set_isodata()):
+                if self.txtlbl != None:
+                    at = AnchoredText(self.txtlbl, frameon=False, loc = 1)
+                    ax.add_artist(at)
+        elif isinstance(label, dict):
+            # label may be passed as a dictionary for AnchoredText kwargs; 
+            # e.g. label={"frameon":False,"prop":dict(size=8),"loc":2}
             if self.txtlbl != None:
-                ax.annotate(self.txtlbl, xy=(0.05, 0.90), xycoords='axes fraction')
+                at = AnchoredText(self.txtlbl, **label)
+                ax.add_artist(at)
 
         # line width = 1
         kwargs['lw'] = 1
+        # legend label
+        kwargs['label'] = self.lbl
 
         # Plot the CMD:
+        
+        #with data if a data file is specified:
+        if obs is not None:
+            mags = np.genfromtxt(os.path.join('/n/conroyfs1/sgossage/match_photometry/TIGS/phot_files', '{:s}.phot'.format(obs)))
+            v, i = mags.T
+            ax.scatter(v-i, i)
+
         base_line, = ax.plot(self.x, self.y, **kwargs)
 
         if setlim:
@@ -510,10 +544,16 @@ class ISOCMD:
 
         ax.set_ylabel(u"${:s}$".format(self.y_name))
         ax.set_xlabel(u"${:s}$".format(self.x_name))
-        ax.set_title(u'MIST Isochrones: ${:s}$ vs. ${:s}$'.format(self.y_name, self.x_name))
+        if title:
+            ax.set_title(u'MIST Isochrones: ${:s}$ vs. ${:s}$'.format(self.y_name, self.x_name))
 
-        if legloc != None:
-           legend = ax.legend(loc=legloc, prop={'size':legsize}, frameon=True)
+        if isinstance(legend, bool):
+           if legend:
+               legend = ax.legend(loc='best', prop={'size':8}, frameon=False)
+        elif isinstance(legend, dict):
+            # legend may be passed as a dictionary for legend() kwargs; 
+            # e.g. label={"frameon":False,"prop":dict(size=8),"loc":'upper right'}
+            legend = ax.legend(**legend)
 
         return self.x, self.y
 
@@ -830,7 +870,7 @@ class EEP:
             ax.set_title(title)
 
         if legloc != None:
-            ax.legend(loc = legloc, prop={'size':8})
+            ax.legend(loc = legloc, prop={'size':8}, frameon=False)
 
         if savename != None:
             plt.savefig(savename, dpi=600)

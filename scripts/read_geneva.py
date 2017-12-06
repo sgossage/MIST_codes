@@ -208,6 +208,66 @@ class star:
 
         return
 
+class iso:
+
+    def __init__(self, lage=7.00000, vvc=0.000):
+        """
+            Open Isochrone.dat file from Geneva website: https://obswww.unige.ch/Recherche/evoldb/index/
+            These files are organized w/ a header for data column names on the first line, and then data blocks
+            corresponding to an isochrone. Each block is preceded by a line reading e.g.:
+
+                   Isochrone for log(time) = 7.00000      
+            
+            and then values separated by white space for that age, corresponding to respective data columns.
+
+        """
+
+        with open("/n/conroyfs1/sgossage/Geneva/Isochrones_largegrid_Z0.014_vvc{:.3f}.dat".format(vvc)) as isof:
+            lines = np.array(isof.readlines())
+            header = lines[0].split()
+            age_index = np.where(lines == "Isochrone for log(time) = {:.5f}\n".format(lage))[0][0]
+            data_block = []
+            for line in lines[age_index+1:]:
+               if line == lines[-1] or "Isochrone for log(time)" in line or line =='\n':
+                   break
+               else:
+                   # add line (data row) to data_block
+                   data_block.append(np.array(map(float, line.split())))
+
+            # e.g. column 1 is np.vstack(data_block).T[0]
+            data_block = np.vstack(data_block).T
+            data = {key:value for key, value in zip(header, data_block)}
+
+            # data is kept in a dictionary w/ key = header column names and value = np.array() of column values.
+            self.data = data
+            
+    def plot(self, xname, yname, ax=None, **kwargs):
+        
+        if ax == None:
+            fig, ax = plt.subplots(figsize=(12,8))
+
+        #if '-' in xname:
+        #    xname = xname.split('-')
+        #    x = self.data[xname[0]] - self.data[xname[1]]
+        if '+' in xname:
+            xname = xname.split('+')
+            x = self.data[xname[0]] + self.data[xname[1]]
+        elif '*' in xname:
+            xname = xname.split('*')
+            x = self.data[xname[0]] * self.data[xname[1]]
+        elif '/' in xname:
+            xname = xname.split('/')
+            x = self.data[xname[0]] / self.data[xname[1]]
+        else:
+            x = self.data[xname]
+
+        y = self.data[yname]
+
+        ax.plot(x, y, **kwargs)
+
+        return ax
+                
+
 """
 def plt_abun(vvc):
 
