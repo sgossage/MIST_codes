@@ -422,6 +422,10 @@ class ISOCMD:
         self.x_name, self.y_name = datdict.keys()
         self.x, self.y = datdict.values()
 
+        # get initial masses
+        self.init_masses = (self.get_data(['initial_mass'], phasemask, age_ind=age_ind)).values()[0]
+        self.init_masses = np.array(map(float, self.init_masses))
+
         # sets labels if given an axis...not necessary?:
         if ax is not None:
             ax.set_ylabel(u"${:s}$".format(self.y_name), rotation=90)
