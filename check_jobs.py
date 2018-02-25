@@ -58,7 +58,7 @@ def checkruns(runname_str, out_sacct=False):
                 with open(histf, 'r') as hf:
                     try:
                         arrdata = np.genfromtxt(hf, skip_header = 5, names = True)
-                    except ValueError, emsg:
+                    except ValueError as emsg:
                         # rewrite/write to history file created mismatched column #s for some reason.
                         print("{:s} has an erroneous history file.".format(trackdir))
                         emsg = str(emsg).split(' ')

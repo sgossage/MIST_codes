@@ -30,7 +30,7 @@ def make_iso_input_file(runname, mode, basic, incomplete=[], custom_path=None):
 
     #Check if this input file exists already, and if so, remove it.
     if os.path.isfile(os.path.join(os.environ['ISO_DIR'], inputfilename)):
-        print "REMOVE OLD ISO INPUT FILE....." + inputfilename + " ({:s})".format(mode)
+        print("REMOVE OLD ISO INPUT FILE....." + inputfilename + " ({:s})".format(mode))
         os.system("rm " + os.path.join(os.environ['ISO_DIR'], inputfilename))
 
     #Define some paths
@@ -102,9 +102,9 @@ def make_iso_input_file(runname, mode, basic, incomplete=[], custom_path=None):
     footer = ["#specify isochrones\n", iso_file, "min_max\n", "log10\n", "150\n", "7.0\n", "10.0\n", "single\n"]
 
     #Write the file
-    print "**************************************************************************"
-    print "WRITE NEW ISO INPUT FILE..... "+os.environ['ISO_DIR']+"/"+inputfilename+" ({:s})".format(mode)
-    print "**************************************************************************"
+    print("**************************************************************************")
+    print("WRITE NEW ISO INPUT FILE..... "+os.environ['ISO_DIR']+"/"+inputfilename+" ({:s})".format(mode))
+    print("**************************************************************************")
     with open(inputfilename, "w") as newinputfile:
         for headerline in header:
             newinputfile.write(headerline)

@@ -49,7 +49,7 @@ if __name__ == "__main__":
     try:
         os.mkdir(dirname)
     except OSError:
-        print "The directory already exists"
+        print("The directory already exists")
         sys.exit(0)
 
     #Generate inlists using template inlist files
@@ -99,7 +99,7 @@ if __name__ == "__main__":
         
         #cd into the individual directory and submit the job
         os.chdir(pathtoinlistdir)
-        print "sbatch " + slurmfile
+        print("sbatch " + slurmfile)
         os.system("sbatch "+slurmfile)
         os.chdir(os.environ['MIST_CODE_DIR'])
     

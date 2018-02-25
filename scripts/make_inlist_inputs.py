@@ -67,7 +67,7 @@ def make_inlist_inputs(runname, Z, vvcstr, startype):
         bctype = 'simple_photosphere'
         bclabel = ''
     else:
-        print 'Invalid choice.'
+        print('Invalid choice.')
         sys.exit(0)
 
     #Create mass lists

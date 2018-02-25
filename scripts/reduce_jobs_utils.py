@@ -184,7 +184,7 @@ def sort_histfiles(rawdirname):
 
     #Trim repeated model numbers, then rename & copy the history files over
     for histfile in listofhist:
-        print 'processing', histfile
+        print('processing', histfile)
         if 'M_history.data' in histfile:
             unformat_mass_string = histfile.split('LOGS/')[1].split('M_history.data')[0]
             newhistfilename = histfile.split('LOGS')[0]+'LOGS/'+reformat_massname.reformat_massname(unformat_mass_string)+'M.track'
@@ -253,7 +253,7 @@ def save_lowM_photo_model(rawdirname):
     
     #check first if these files exist in case the grid consists only of high mass stars.
     if len(listofphoto) < 1:
-        print "THERE ARE NO PHOTOS OR MODELS SAVED AT THE POST-AGB PHASE."
+        print("THERE ARE NO PHOTOS OR MODELS SAVED AT THE POST-AGB PHASE.")
     else:
         for i in range(len(listofphoto)):
             format_mass_string = listofphoto[i].split('/')[-3].split('M_')[0]

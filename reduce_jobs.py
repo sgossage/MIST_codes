@@ -41,32 +41,32 @@ if __name__ == "__main__":
     #Make the isochrones directory that will be filled in later
     os.mkdir(os.path.join(newdirname, "isochrones"))
 
-    print "************************************************************"
-    print "****************SORTING THE HISTORY FILES*******************"
-    print "************************************************************"
+    print("************************************************************")
+    print("****************SORTING THE HISTORY FILES*******************")
+    print("************************************************************")
     reduce_jobs_utils.sort_histfiles(rawdirname)
     
-    print "************************************************************"
-    print "****************GENERATING A SUMMARY FILE*******************"
-    print "************************************************************"
+    print("************************************************************")
+    print("****************GENERATING A SUMMARY FILE*******************")
+    print("************************************************************")
     reduce_jobs_utils.gen_summary(rawdirname)
     
     #Copy the summary file
     os.system("mv tracks_summary.txt " + newdirname)
     
-    print "************************************************************"
-    print "****************SORTING THE INLIST FILES********************"
-    print "************************************************************"
+    print("************************************************************")
+    print("****************SORTING THE INLIST FILES********************")
+    print("************************************************************")
     reduce_jobs_utils.save_inlists(rawdirname)
     
-    print "************************************************************"
-    print "***************SORTING THE PHOTOS AND MODELS****************"
-    print "************************************************************"
+    print("************************************************************")
+    print("***************SORTING THE PHOTOS AND MODELS****************")
+    print("************************************************************")
     reduce_jobs_utils.save_lowM_photo_model(rawdirname)
     
-    print "************************************************************"
-    print "**********************MAKE ISOCHRONES***********************"
-    print "************************************************************"
+    print("************************************************************")
+    print("**********************MAKE ISOCHRONES***********************")
+    print("************************************************************")
     #make_eeps_isos.make_eeps_isos(runname, basic=True)
     make_eeps_isos.make_eeps_isos(runname, basic=False)
     
@@ -83,9 +83,9 @@ if __name__ == "__main__":
     #mesa_plot_grid.plot_iso(runname)
     #mesa_plot_grid.plot_combine(runname, iso=True, remove_pdf=False)
     
-    print "************************************************************"
-    print "******COMPRESSING BOTH TRACKS AND REDUCED DIRECTORIES*******"
-    print "************************************************************"
+    print("************************************************************")
+    print("******COMPRESSING BOTH TRACKS AND REDUCED DIRECTORIES*******")
+    print("************************************************************")
     #make a separate tracks directory
     os.system("mv " + os.path.join(newdirname, "tracks") + " " + newdirname + "_tracks")
     os.system("cp " + os.path.join(newdirname, "tracks_summary.txt") + " " + newdirname + "_tracks")
@@ -95,9 +95,9 @@ if __name__ == "__main__":
     os.system("tar -zcvf " + '_'.join(runname.split('/')) + ".tar.gz " + runname)
     os.system("tar -zcvf " + '_'.join(runname.split('/')) + "_tracks.tar.gz " + runname+'_tracks')
     
-    print "************************************************************"
-    print "****************MIGRATING FILES TO STORAGE******************"
-    print "************************************************************"
+    print("************************************************************")
+    print("****************MIGRATING FILES TO STORAGE******************")
+    print("************************************************************")
     os.system("rm -rf " + runname)
     os.system("rm -rf " + runname + '_tracks')
     print('Moving {:s} to {:s}...'.format(rawdirname, os.path.join(os.environ['STORE_DIR'], runname.split('/')[0])))

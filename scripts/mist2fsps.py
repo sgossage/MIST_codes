@@ -19,11 +19,11 @@ def read_mist(file):
     with open(file) as f:
         data = f.readlines()
         header = data[0:3]
-        print '------------------------------------------------------------'
-        print header[0].split('\n')[0]
-        print header[1].split('\n')[0]
-        print header[2].split('\n')[0]
-        print '------------------------------------------------------------'
+        print('------------------------------------------------------------')
+        print(header[0].split('\n')[0])
+        print(header[1].split('\n')[0])
+        print(header[2].split('\n')[0])
+        print('------------------------------------------------------------')
     
     #Read the column names
     colname_string1 = data[4]
