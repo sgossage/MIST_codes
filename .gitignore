@@ -1,5 +1,12 @@
 # compiled code
 *.pyc
+*.o
+*.e
+*.ipynb
+
+# directories
+notebooks/*
+reducejobs_*/*
 
 #emacs backups
 *~
