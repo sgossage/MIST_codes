@@ -426,10 +426,10 @@ class ISOCMD:
         # datadict holds all .iso file data for the specified isochrone. Organize it into desired x, y here:
         datdict = self.get_data([x_name, y_name], phasemask, age_ind=age_ind, dmod=dmod)
         self.x_name, self.y_name = datdict.keys()
-        self.x, self.y = datdict.values()
+        self.x, self.y = list(datdict.values())
 
         # get initial masses
-        self.init_masses = (self.get_data(['initial_mass'], phasemask, age_ind=age_ind)).values()[0]
+        self.init_masses = list((self.get_data(['initial_mass'], phasemask, age_ind=age_ind)).values())[0]
         self.init_masses = np.array(map(float, self.init_masses))
 
         # sets labels if given an axis...not necessary?:
