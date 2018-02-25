@@ -15,18 +15,19 @@ sns.set_style("ticks", {'font.family' : 'serif', 'font.serif': ['Times', 'Palati
 plt.axes(frameon=False)
 
 from MIST_codes.scripts.fileio import *
-from gdiso import *
-import read_geneva as rg
-import isomist
+from MIST_codes.scripts.gdiso import *
+from MIST_codes.scripts import read_geneva as rg
+from MIST_codes.scripts import isomist
 
-params = {'axes.labelsize': 20,'axes.titlesize':20, 'text.fontsize': 14, 'xtick.labelsize': 14, 'ytick.labelsize': 14}
+params = {'axes.labelsize': 20,'axes.titlesize':20, 'font.size': 14, 'xtick.labelsize': 14, 'ytick.labelsize': 14}
 mpl.rcParams.update(params)
 
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
-from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
+#from mpl_toolkits.axes_grid1.anchored_artists import AnchoredText
+from matplotlib.offsetbox import AnchoredText
 
 # plot font sizing:
-params = {'axes.labelsize':20, 'axes.titlesize': 20, 'text.fontsize':14,
+params = {'axes.labelsize':20, 'axes.titlesize': 20, 'font.size':14,
           'xtick.labelsize': 14, 'ytick.labelsize': 14}
 mpl.rcParams.update(params)
 

@@ -42,7 +42,7 @@ def plot_HRD(gridname, logg_flag=False, lc = 'RoyalBlue'):
         star = read_mist_models.EEP(file)
         logTeff, logL, logg = star.eeps['log_Teff'], star.eeps['log_L'], star.eeps['log_g']
 
-    	if logg_flag == False:
+        if logg_flag == False:
             ax.plot(logTeff, logL, color = lc, label = '{:s} Msun ([Fe/H] = {:s}, v/vcrit = {:s})'.format(str(starmass), gridname.split('_')[1], gridname.split('vvcrit')[-1]))
 
             if starmass < 0.8:

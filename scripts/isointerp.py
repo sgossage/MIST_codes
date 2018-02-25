@@ -1,7 +1,7 @@
 import glob
 import os
 import numpy as np
-from pathing import isopath
+from MIST_codes.scripts.pathing import isopath
 
 def call_isointerp(vvcrit, feh, cov=None, custom_isopath = None, exttag = None):
 

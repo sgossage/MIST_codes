@@ -3,10 +3,10 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-import isointerp
-import createcmd as ccmd
-import isomist
-from gdiso import *
+from MIST_codes.scripts import isointerp
+from MIST_codes.scripts import createcmd as ccmd
+from MIST_codes.scripts import isomist
+from MIST_codes.scripts.gdiso import *
 
 def get_fn(feh, vvcrit, mode, mass=0.0, ebv = 0.0, gravdark_i = 0.0, exttag=None, version='1.0'):
     """

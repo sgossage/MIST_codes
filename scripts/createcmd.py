@@ -1,7 +1,7 @@
 import glob
 import os
 import numpy as np
-from gdiso import *
+from MIST_codes.scripts.gdiso import *
 
 def createcmd(isoobj, photstr='UBVRIplus', feh= None, vvcrit = None, cov = None, Av=None, fname = None, gravdark_i = 0.0):
 
