@@ -97,7 +97,7 @@ class star:
                 vvcstr = str(vvcstr)
                 
             # my path to Geneva files (**system dependent**):
-            fpath = '/home/seth/Research/Geneva'
+            fpath = '/n/conroyfs1/sgossage/Geneva'
 
             # Resultant file name:
             self.fname = os.path.join(fpath, 'z0.014','tracks','dense','M{:s}Z14V{:s}.dat'.format(minitstr, vvcstr))

@@ -81,10 +81,14 @@ def make_iso_input_file(runname, mode, basic, incomplete=[], custom_path=None):
     fehyzinfo = np.genfromtxt('feh_zinit_yinit_table.txt')
     dirname = runname.split('/')[-1]
     # SSG, added 'extra' parameter in case I want to have an extra piece in my project name for e.g. overshooting.
-    if len(dirname.split('_')) > 5:
-        fehstr, feh, afestr, afe, vvcrit, extra = dirname.split('_')
-    elif len(dirname.split('_')) == 5:
-        fehstr, feh, afestr, afe, vvcrit = dirname.split('_')
+    
+    elements = dirname.split('_', 5)
+    fehstr, feh, afestr, afe, vvcrit = elements[:5]
+    
+    #if len(dirname.split('_')) > 5:
+    #    fehstr, feh, afestr, afe, vvcrit, extra = dirname.split('_')
+    #elif len(dirname.split('_')) == 5:
+    #    fehstr, feh, afestr, afe, vvcrit = dirname.split('_')
 
     fehval = float(feh[1:])*1.0
     if 'm' in feh:

@@ -38,7 +38,8 @@ if __name__ == "__main__":
         # If partition is unspecified, use default as conroy.
         partition = "conroy"
 
-    if partition != 'conroy' or partition != 'conroy-intel':
+    if partition != 'conroy' and partition != 'conroy-intel':
+        print(partition)
         partition = 'conroy'
 
     Z = calc_xyz.calc_xyz(float(FeH),input_feh=True)[-1]

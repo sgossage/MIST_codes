@@ -23,7 +23,7 @@ def trim_file(histfile):
     arrdata = np.genfromtxt(histfile, skip_header=5, names=True)
     
     #remove postAGB squiggles
-    starmass = arrdata['star_mass']
+    """starmass = arrdata['star_mass']
     if ((starmass[0]<10.0) & (starmass[0]>0.6)):
         ccoremass = arrdata['c_core_mass']
         starage = arrdata['star_age']
@@ -34,6 +34,9 @@ def trim_file(histfile):
         
         pagbind_tmp = np.where((starmass-ccoremass)/starmass[0] < 0.15)[0]
         if len(pagbind_tmp) > 0:
+            print(pagbind_tmp)
+            print(logLHe)
+            print(logLHe[pagbind_tmp[0]])
             pagbind = np.where((logTeff > logTeff[logLHe[pagbind_tmp[0]]]+0.1) & ((starmass-ccoremass)/starmass[0] < 0.15))[0]
             if len(pagbind) > 0:
                 xx = starage[pagbind]-starage[pagbind][0]
@@ -46,7 +49,7 @@ def trim_file(histfile):
                     print 'Cutting out bad PAGB scribbles...'                    
                     arrdata = (np.delete(np.array(arrdata), np.array(badpagb)+pagbind[0], 0))
                     data = list(np.delete(np.array(data), np.array(badpagb)+pagbind[0], 0))
-            
+    """        
     #prune repeated model numbers due to backups and retries    
     mn = arrdata['model_number']
     diff_mn = mn[1:]-mn[:-1]

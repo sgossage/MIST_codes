@@ -25,6 +25,11 @@ mpl.rcParams.update(params)
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 
+# plot font sizing:
+params = {'axes.labelsize':20, 'axes.titlesize': 20, 'text.fontsize':14,
+          'xtick.labelsize': 14, 'ytick.labelsize': 14}
+mpl.rcParams.update(params)
+
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class ISO:
@@ -458,7 +463,10 @@ class ISOCMD:
             diff_arr = abs(init_masses - masses)
             m_i = np.where(diff_arr == np.min(diff_arr))[0][0]
             ax.scatter(x[m_i], y[m_i], lw=0.1, alpha=0.5, color = base_line.get_color(), zorder=2)
-            ax.text(x[m_i]*0.98, y[m_i], '{:.2f}'.format(init_masses[m_i]) + r' $M_{\odot}$', fontsize=4, color = base_line.get_color())
+            if not init_masses[m_i].is_integer():
+                ax.text(x[m_i]*0.98, y[m_i], '{:.2f}'.format(init_masses[m_i]) + r' $M_{\odot}$', fontsize=4, color = base_line.get_color())
+            else:
+                ax.text(x[m_i]*0.98, y[m_i], '{:d}'.format(int(init_masses[m_i])) + r' $M_{\odot}$', fontsize=4, color = base_line.get_color())
 
         # same as above, but for the case of a list of masses:
         elif isinstance(masses, list):
@@ -539,8 +547,13 @@ class ISOCMD:
             diff_arr = abs(self.init_masses - masses)
             m_i = np.where(diff_arr == np.min(diff_arr))[0][0]
             ax.scatter(self.x[m_i], self.y[m_i], lw=0.1, alpha=0.5, color = base_line.get_color(), zorder=2)
-            ax.text(self.x[m_i]*0.98, self.y[m_i], '{:.2f}'.format(self.init_masses[m_i]) + r' $M_{\odot}$', fontsize=8, color = 'k')
+            print('!')
+            if not round(self.init_masses[m_i], 2).is_integer():
+                ax.text(self.x[m_i]*0.98, self.y[m_i], '{:.2f}'.format(self.init_masses[m_i]) + r' $M_{\odot}$', fontsize=8, color = 'k')
+            else:
+                ax.text(x[m_i]*0.98, y[m_i], '{:d}'.format(int(self.init_masses[m_i])) + r' $M_{\odot}$', fontsize=4, color = base_line.get_color())
 
+            
         curr_xlims, curr_ylims = expand_lims(ax, ypad=0.05, xpad=0.05)
 
         self.xextent = np.array(curr_xlims)
@@ -560,6 +573,19 @@ class ISOCMD:
             legend = ax.legend(**legend)
 
         return self.x, self.y
+
+    def colormi(self, ax, limits, cmap=plt.cm.cool):
+
+        mrange_i = (min(limits) <= self.init_masses) & (self.init_masses <= max(limits))
+
+        mi = self.init_masses[mrange_i]
+        print(mi)
+        x = self.x[mrange_i]
+        y = self.y[mrange_i]
+        ax, lc = color_lineby_z(x, y, mi, min(mi), max(mi), ax, cmap=cmap)
+
+        return
+        
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -600,6 +626,7 @@ class EEP:
 
         # or else find a track.eep file given feh, v/vcrit, mass, and an extra tag (e.g. 'TP'):
         else:
+            print('Getting file name...')
             self.filename = get_fn(feh, vvcrit, mode='eep', mass=mass, exttag=exttag)
             if isinstance(self.filename, list):
                 # find the closest mass:
@@ -685,7 +712,7 @@ class EEP:
         return ages[-1] - ages[0]
         		
     def plot_HR(self, fignum=0, phases=[], phasecolor=[], phasemask = [], ax = None, shade = 0.0, cbar_valname = None, masslbl=True, vvclbl=False,
-                title=None, xlims = None, ylims = None, agemarks = None, legloc = None, label=False, showplt = False, savename = None, xlabel=True,
+                title=None, xlims = None, ylims = None, agemarks = None, legend = None, label=False, showplt = False, savename = None, xlabel=True,
                 ylabel = True, geneva_on=False, geneva_lbl=False, MIST_on = True, setlim=False, **kwargs):
         
         """
@@ -715,7 +742,7 @@ class EEP:
             phasemask = [-1,2,3,4,5,6,9]
         self.phasemask = phasemask
 
-        if  shade > 1.0 or shade < 0.0:
+        if  shade > 1.0 or shade < 0.0 and shade != None:
             shade = 0.0
             print("Warning: shade must be between 0 and 1.")
         if shade != None:
@@ -821,7 +848,16 @@ class EEP:
         if geneva_on:
             try:
                 geneva_star = rg.star(vvc = self.rot, minit = self.minit)
-                genx, geny, lc = geneva_star.plot_HR(ax = ax, label = geneva_lbl, shade = shade, ls = '--')
+                if not MIST_on:
+                    try:
+                        kwargs['alpha'] = alpha
+                    except NameError:
+                        kwargs['alpha'] = 1.0
+                        
+                    # use provided kwargs for geneva plot if mist is not turned on.
+                    genx, geny, lc = geneva_star.plot_HR(ax = ax, label = geneva_lbl, shade = shade, ls = '--', **kwargs)
+                else:
+                    genx, geny, lc = geneva_star.plot_HR(ax = ax, label = geneva_lbl, shade = shade, ls = '--')
 
             # in case the Geneva star is not recoverable:
             except IOError:
@@ -873,8 +909,11 @@ class EEP:
         if title != None:
             ax.set_title(title)
 
-        if legloc != None:
-            ax.legend(loc = legloc, prop={'size':8}, frameon=False)
+        if legend != None:
+            if isinstance(legend, bool):
+                ax.legend(loc = legloc, prop={'size':8}, frameon=False)
+            elif isinstance(legend, dict):
+                ax.legend(**legend)
 
         if savename != None:
             plt.savefig(savename, dpi=600)
@@ -937,7 +976,10 @@ class EEP:
         if masslbl:
             txtx = txtx+abs(txtx)*xfac
             txty = txty-abs(txty)*yfac
-            ax.text(txtx, txty, "{:.2f} ".format(self.minit) + r'$M_{\odot}$', fontsize = 10)
+            if not (self.minit).is_integer():
+                ax.text(txtx, txty, "{:.2f} ".format(self.minit) + r'$M_{\odot}$', fontsize = 16)
+            else:
+                ax.text(txtx, txty, "{:d} ".format(int(self.minit)) + r'$M_{\odot}$', fontsize = 16)
 
         # expand the axes to make space for new text.
         xlims, ylims = expand_lims(ax, x=txtx, y=txty, reverse_x=True)
@@ -1071,7 +1113,7 @@ class EEPCMD:
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-def color_lineby_z(x, y, z, zmin, zmax, ax, **kwargs):
+def color_lineby_z(x, y, z, zmin, zmax, ax, cmap=plt.get_cmap('cool'), **kwargs):
         
     """
         See http://matplotlib.org/examples/pylab_examples/multicolored_line.html as the source.
@@ -1083,7 +1125,7 @@ def color_lineby_z(x, y, z, zmin, zmax, ax, **kwargs):
     points = np.array([x, y]).T.reshape(-1, 1, 2)
     segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-    lc = LineCollection(segments, cmap=plt.get_cmap('jet'), norm=plt.Normalize(zmin, zmax))
+    lc = LineCollection(segments, cmap=cmap, norm=plt.Normalize(zmin, zmax))
     lc.set_array(z)
     #lc.set_clim(vmin=0.0,vmax=1.0)
 
