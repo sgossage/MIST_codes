@@ -74,20 +74,35 @@ class ISO:
             print(filename)
             self.filename = filename
 
-        if verbose:
+        if verbose and read:
             print('Reading in: ' + self.filename)
-
-        self.version, self.abun, self.rot, self.ages, self.num_ages, self.hdr_list, self.isos = self.read_iso_file()
+        if read:
+            self.version, self.abun, self.rot, self.ages, self.num_ages, self.hdr_list, self.isos = self.read_iso_file()
         # Check if gravity darkening is desired:
         if gravdark_i > 0.0:
             print("Checking for gravity darkened .iso file...")
             # Will check for GDed .iso file; creates one if nec.
-            filename = rw_gdiso(self, filename, gravdark_i)
-            # replace filename with the new GD file:
-            self.filename = filename
-            # read in the new gravity darkened data:
-            if read:
+            gdisoname = filename.split('.iso')[0] + '_gdark{:.1f}.iso'.format(gravdark_i)
+            # Check if the .iso file already exists:
+            if os.path.isfile(gdisoname):
+                print("Gravity darkened .iso file {:s} exists.".format(gdisoname))
+                self.filename = gdisoname#outfname
+                if read:
+                    self.version, self.abun, self.rot, self.ages, self.num_ages, self.hdr_list, self.isos = self.read_iso_file()
+            # if it doesn't, create it (have to read in isos to calculate gd'ed values):
+            else:
+                print("Creating gravity darkened .iso file {:s}.".format(gdisoname))
                 self.version, self.abun, self.rot, self.ages, self.num_ages, self.hdr_list, self.isos = self.read_iso_file()
+                print("Loaded non-gravity darkened .iso file {:s}. Re-writing with gravity darkened values.".format(filename))
+                filename = rw_gdiso(self, gdisoname, gravdark_i)
+                print("Created gravity darkened .iso file {:s}.".format(gdisoname))             
+                self.filename = filename
+                
+            # replace filename with the new GD file:
+            #self.filename = filename
+            # read in the new gravity darkened data:
+            #if read:
+            #    self.version, self.abun, self.rot, self.ages, self.num_ages, self.hdr_list, self.isos = self.read_iso_file()
 
     def read_iso_file(self):
 
@@ -127,6 +142,7 @@ class ISO:
             iso_set.append(iso)
             ages.append(iso[0][1])
             counter+= 3+num_eeps+2
+        print(len(iso_set))
         return version, abun, rot, ages, num_ages, hdr_list, iso_set  
         
     def age_index(self, age):
@@ -344,7 +360,7 @@ class ISOCMD:
 
     def set_isodata(self, lage, x_name, y_name, dmod=0.0, ax=None, phasemask=[], 
                     x_to_ymx=True, geneva_on=False, labels=['exttag', 'age', 'feh', 'vvc', 'inc'], 
-                    texts=None, lgdlbl=None):
+                    texts=None, lgdlbl=None, verbose=False):
         """
             Given a log10 age, get the data desired to plot the CMD or HRD
            
@@ -362,8 +378,9 @@ class ISOCMD:
 
         age_ind = self.age_index(lage)
 
-        print("Given log10 age: {:.2f}; Closest log10 age: {:.2f}".format(lage, self.isocmds[age_ind]['log10_isochrone_age_yr'][0]))
-        print("Using log10 age = {:.2f}.".format(self.isocmds[age_ind]['log10_isochrone_age_yr'][0]))
+        if verbose:
+            print("Given log10 age: {:.2f}; Closest log10 age: {:.2f}".format(lage, self.isocmds[age_ind]['log10_isochrone_age_yr'][0]))
+            print("Using log10 age = {:.2f}.".format(self.isocmds[age_ind]['log10_isochrone_age_yr'][0]))
         lage = self.isocmds[age_ind]['log10_isochrone_age_yr'][0]
 
         # For labeling age in potential plots, :
@@ -442,7 +459,8 @@ class ISOCMD:
         # stellar masses (not needed?):
         # self.init_masses = self.isocmds[age_ind]['initial_mass']
 
-        print("Set data for {:s}".format(self.lbl))
+        if verbose:
+            print("Set data for {:s}".format(self.lbl))
 
         return #x, y, init_masses, phases
 

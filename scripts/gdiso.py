@@ -119,85 +119,87 @@ def rw_gdiso(isoobj, filename, angle):
     # re-writing iso file with grav. darkening effects:
     
     # convert rad to deg
-    angle_deg = angle#(180./pi)*angle
-    outfname = filename.split('.iso')[0] + '_gdark{:.1f}.iso'.format(angle_deg)
+    #angle_deg = angle#(180./pi)*angle
+    #outfname = filename.split('.iso')[0] + '_gdark{:.1f}.iso'.format(angle_deg)
     # Check if the .iso file already exists:
-    if os.path.isfile(outfname):
+    #if os.path.isfile(outfname):
         #print("The .iso file \"{:s}\" already exists and will be used.".format(outfname))
-        return outfname
+    #    return outfname
     # If it doesn't, create it:
-    else:
-        isos = isoobj.isos
+    outfname = filename#filename.split('.iso')[0] + '_gdark{:.2f}.iso'.format(angle)
+    #else:
+    isos = isoobj.isos
+    numisos = len(isos)
+    print(type(isos))
+    print(len(isos))
 
-        numisos = len(isos)
+    # organizing iso data blocks:
+    isoblocks = []
+    #print('Organizing iso data...')
+    for i in range(numisos):
+        block = []
+        numrows = len(isos[i]['EEP'][:])
+        iso = copy(gdiso(isos[i], angle))
 
-        # organizing iso data blocks:
-        isoblocks = []
-        #print('Organizing iso data...')
-        for i in range(numisos):
-            block = []
-            numrows = len(isos[i]['EEP'][:])
-            iso = copy(gdiso(isos[i], angle))
+        for r in range(numrows):
+            row = []
+            for name in isoobj.hdr_list:
+                if name != 'EEP':
+                    # adopting precision in MIST .iso files:
+                    row.append("{:.16E}".format(iso[name][r]))
+                else:
+                    # EEPs are recorded as ints:
+                    row.append("{:d}".format(iso[name][r]))
 
-            for r in range(numrows):
-                row = []
-                for name in isoobj.hdr_list:
-                    if name != 'EEP':
-                        # adopting precision in MIST .iso files:
-                        row.append("{:.16E}".format(iso[name][r]))
-                    else:
-                        # EEPs are recorded as ints:
-                        row.append("{:d}".format(iso[name][r]))
+            block.append(row)
 
-                block.append(row)
-
-            isoblocks.append(block)
+        isoblocks.append(block)
         
-        # write data to .iso file in format similar to A. Dotter's iso code.        
-        #print("Writing {:s}...".format(outfname))
-        with open(outfname, 'w+') as outf:
-            outf.write('# MIST version number  = {:s}\n'.format(isoobj.version['MIST']))
-            outf.write('# MIST revision number = {:s}\n'.format(isoobj.version['MESA']))
-            outf.write('# --------------------------------------------------------------------------------------\n')
-            outf.write('#{:>7s}{:>14s}{:>9s}{:>9s}'.format(isoobj.abun.keys()[1],isoobj.abun.keys()[0],isoobj.abun.keys()[2],isoobj.abun.keys()[3]))
-            outf.write('{:>9s}\n'.format('v/vcrit'))
-            outf.write('#{:>7s}'.format("{:.4f}".format(isoobj.abun.values()[1]))) # Yinit
-            outf.write('{:>14s}'.format(eformat(isoobj.abun.values()[0], 5, 2))) # Zinit
-            outf.write('{:>9s}'.format("{:.2f}".format(isoobj.abun.values()[2]))) # [Fe/H]
-            outf.write('{:>9s}'.format("{:.2f}".format(isoobj.abun.values()[3]))) # [a/Fe]
-            outf.write('{:>9s}\n'.format("{:.2f}".format(isoobj.rot))) #v/vcrit
-            outf.write('# --------------------------------------------------------------------------------------\n')
-            outf.write('# number of isochrones =   {:d}\n'.format(len(isoblocks)))
-            outf.write('# --------------------------------------------------------------------------------------\n')
-            # write blocks of iso data:
-            for i, isoblock in enumerate(isoblocks):
-                # for a block, write num EEPs, num columns
-                outf.write('# number of EEPs, cols =   {:d}   {:d}\n'.format(len(isoblock), len(isoblock[0])))
-                outf.write('#{:>4s}'.format('1'))
-                for i in range(2,80):
-                    outf.write('{:>32s}'.format(str(i)))
+    # write data to .iso file in format similar to A. Dotter's iso code.        
+    #print("Writing {:s}...".format(outfname))
+    with open(outfname, 'w+') as outf:
+        outf.write('# MIST version number  = {:s}\n'.format(isoobj.version['MIST']))
+        outf.write('# MESA revision number = {:s}\n'.format(isoobj.version['MESA']))
+        outf.write('# --------------------------------------------------------------------------------------\n')
+        outf.write('#{:>7s}{:>13s}{:>8s}{:>8s}'.format(list(isoobj.abun.keys())[0],list(isoobj.abun.keys())[1],list(isoobj.abun.keys())[2],list(isoobj.abun.keys())[3]))
+        outf.write('{:>8s}\n'.format('v/vcrit'))
+        outf.write('#{:>7s}'.format("{:.4f}".format(list(isoobj.abun.values())[0]))) # Yinit
+        outf.write('{:>13s}'.format(eformat(list(isoobj.abun.values())[1], 5, 2))) # Zinit
+        outf.write('{:>8s}'.format("{:.2f}".format(list(isoobj.abun.values())[2]))) # [Fe/H]
+        outf.write('{:>8s}'.format("{:.2f}".format(list(isoobj.abun.values())[3]))) # [a/Fe]
+        outf.write('{:>8s}\n'.format("{:.2f}".format(isoobj.rot))) #v/vcrit
+        outf.write('# --------------------------------------------------------------------------------------\n')
+        outf.write('# number of isochrones =   {:d}\n'.format(len(isoblocks)))
+        outf.write('# --------------------------------------------------------------------------------------\n')
+        # write blocks of iso data:
+        for i, isoblock in enumerate(isoblocks):
+            # for a block, write num EEPs, num columns
+            outf.write('# number of EEPs, cols =   {:d}   {:d}\n'.format(len(isoblock), len(isoblock[0])))
+            outf.write('#{:>4s}'.format('1'))
+            for i in range(2,80):
+                outf.write('{:>32s}'.format(str(i)))
+            outf.write('\n')
+
+            # for a block, write the header:
+            for name in isoobj.hdr_list:
+                if name == 'EEP':
+                    outf.write('#{:>4s}'.format(name))
+                else:
+                    outf.write('{:>32s}'.format(name))
+
+            # for an iso block, write data rows
+            for blockrow in isoblock:
                 outf.write('\n')
-
-                # for a block, write the header:
-                for name in isoobj.hdr_list:
-                    if name == 'EEP':
-                        outf.write('#{:>4s}'.format(name))
+                for j, val in enumerate(blockrow):
+                    if j == 0:
+                        outf.write(' {:>4s}'.format(str(val)))
                     else:
-                        outf.write('{:>32s}'.format(name))
+                        outf.write('{:>32s}'.format(eformat(float(val), 16, 3)))
 
-                # for an iso block, write data rows
-                for blockrow in isoblock:
-                    outf.write('\n')
-                    for j, val in enumerate(blockrow):
-                        if j == 0:
-                            outf.write(' {:>4s}'.format(str(val)))
-                        else:
-                            outf.write('{:>32s}'.format(eformat(float(val), 16, 3)))
+            if i < len(isoblocks) - 2:
+                outf.write('\n\n\n')
 
-                if i < len(isoblocks) - 2:
-                    outf.write('\n\n\n')
-
-        return outfname
+    return outfname
 
 def rw_gdeep(eep, filename, angle):
     # re-writing iso file with grav. darkening effects:
