@@ -71,16 +71,16 @@ def createcmd(isoobj, photstr='UBVRIplus', feh= None, vvcrit = None, cov = None,
         out_fnames.append(filename + '.cmd')
         # check if the .cmd file already exists; it may not need to be recreated:
         if os.path.isfile(out_fnames[idx]):
-            print("The .cmd file \"{:s}\" already exists...".format(out_fnames[idx]))
+            #print("The .cmd file \"{:s}\" already exists...".format(out_fnames[idx]))
             with open(out_fnames[idx], 'r') as cmdf:
                 cmdflines = cmdf.readlines()
             # Check if extinction in the currently existing .cmd file matches desired value:
             if "{:.3f}".format(float(cmdflines[8].split()[-1])) == "{:.3f}".format(Av):
                 # if it does, continue to next file
-                print("Desired Av = {:.3f} matches existing Av = {:.3f}; the existing .cmd file will be used.".format(Av, float(cmdflines[8].split()[-1])))
+                #print("Desired Av = {:.3f} matches existing Av = {:.3f}; the existing .cmd file will be used.".format(Av, float(cmdflines[8].split()[-1])))
                 continue
             else:
-                print("Desired Av = {:.3f} does not match existing Av = {:.3f}; creating a new .cmd file...".format(Av, float(cmdflines[8].split()[-1])))
+                #print("Desired Av = {:.3f} does not match existing Av = {:.3f}; creating a new .cmd file...".format(Av, float(cmdflines[8].split()[-1])))
                 # or else, continue this iteration and create a new .cmd file:
                 pass
 

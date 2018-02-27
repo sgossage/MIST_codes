@@ -42,7 +42,7 @@ class ISO:
     
     """
     
-    def __init__(self, feh = 0.00, vvcrit = 0.0, filename = None, gravdark_i = 0.0, exttag = None, verbose=True, read=True, version='1.0'):
+    def __init__(self, feh = 0.00, vvcrit = 0.0, filename = None, gravdark_i = 0.0, exttag = None, verbose=False, read=True, version='1.0'):
     
         """
         
@@ -71,7 +71,7 @@ class ISO:
             self.filename = filename
         else:
             filename = get_fn(feh, vvcrit, mode='iso', gravdark_i = gravdark_i, exttag = exttag, version = version)
-            print(filename)
+            #print(filename)
             self.filename = filename
 
         if verbose and read:
@@ -80,22 +80,22 @@ class ISO:
             self.version, self.abun, self.rot, self.ages, self.num_ages, self.hdr_list, self.isos = self.read_iso_file()
         # Check if gravity darkening is desired:
         if gravdark_i > 0.0:
-            print("Checking for gravity darkened .iso file...")
+            #print("Checking for gravity darkened .iso file...")
             # Will check for GDed .iso file; creates one if nec.
             gdisoname = filename.split('.iso')[0] + '_gdark{:.1f}.iso'.format(gravdark_i)
             # Check if the .iso file already exists:
             if os.path.isfile(gdisoname):
-                print("Gravity darkened .iso file {:s} exists.".format(gdisoname))
+                #print("Gravity darkened .iso file {:s} exists.".format(gdisoname))
                 self.filename = gdisoname#outfname
                 if read:
                     self.version, self.abun, self.rot, self.ages, self.num_ages, self.hdr_list, self.isos = self.read_iso_file()
             # if it doesn't, create it (have to read in isos to calculate gd'ed values):
             else:
-                print("Creating gravity darkened .iso file {:s}.".format(gdisoname))
+                #print("Creating gravity darkened .iso file {:s}.".format(gdisoname))
                 self.version, self.abun, self.rot, self.ages, self.num_ages, self.hdr_list, self.isos = self.read_iso_file()
-                print("Loaded non-gravity darkened .iso file {:s}. Re-writing with gravity darkened values.".format(filename))
+                #print("Loaded non-gravity darkened .iso file {:s}. Re-writing with gravity darkened values.".format(filename))
                 filename = rw_gdiso(self, gdisoname, gravdark_i)
-                print("Created gravity darkened .iso file {:s}.".format(gdisoname))             
+                #print("Created gravity darkened .iso file {:s}.".format(gdisoname))             
                 self.filename = filename
                 
             # replace filename with the new GD file:
@@ -176,7 +176,7 @@ class ISOCMD:
     
     """
     
-    def __init__(self, feh=0.00, vvcrit=0.0, ebv=0.0, gravdark_i=0.0, exttag=None, filename=None, verbose=True, version = '1.0'):
+    def __init__(self, feh=0.00, vvcrit=0.0, ebv=0.0, gravdark_i=0.0, exttag=None, filename=None, verbose=False, version = '1.0'):
     
         """
         
@@ -224,7 +224,7 @@ class ISOCMD:
             print('Reading in: ' + self.filename)
         
         self.version, self.photo_sys, self.abun, self.Av_extinction, self.rot, self.ages, self.num_ages, self.hdr_list, self.isocmds = self.read_isocmd_file()
-        print("Created an ISOCMD instance with photoemetric system {:s}, [Fe/H] = {:f}, Av = {:f}, V/Vc = {:.1f}, inclination angle = {:.1f}".format(self.photo_sys, self.feh, self.Av_extinction, self.rot, self.gdark_i))
+        #print("Created an ISOCMD instance with photoemetric system {:s}, [Fe/H] = {:f}, Av = {:f}, V/Vc = {:.1f}, inclination angle = {:.1f}".format(self.photo_sys, self.feh, self.Av_extinction, self.rot, self.gdark_i))
     
     def read_isocmd_file(self):
 

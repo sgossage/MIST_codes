@@ -109,7 +109,7 @@ def get_isocmdf(grid_dir, feh, vvcrit, Av = 0.0, gravdark_i=0.0, exttag=None, cr
             assert len(isofile) == 1, "Got {:d}, rather than one .iso file in {:s}.".format(len(isofile), grid_dir)
             filename = isofile[0]
 
-        print('-----')
+        #print('-----')
         if create_cmd:
             cmdfile = isomist.createcmd(filename, Av = Av, gravdark_i = gravdark_i)
             filename = cmdfile
