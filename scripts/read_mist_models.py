@@ -292,11 +292,20 @@ class ISOCMD:
             
         return age_index
 
-    def get_masked(self, hdr_name, phasemask, age_ind=slice(None,None), dmod=0.0):
+    def get_masked(self, hdr_name, phasemask, age_ind=slice(None,None), dmod=0.0, mrange=[]):
 
         # For masking out phases (e.g. PMS); grabs appropriate age block if told to:
         x = self.isocmds[age_ind][hdr_name]
         p = self.isocmds[age_ind]['phase']
+        miraw = self.isocmds[age_ind]['initial_mass']
+        mi = np.array(list(map(float, miraw)))
+
+        # cut data to a given mass range:
+        if len(mrange) == 2:
+            mrange_i = (min(mrange) <= mi) & (mi <= max(mrange))
+            x = x[mrange_i]
+            p = p[mrange_i] 
+
         # if phasemask = [] (default), this loop is skipped and there's no mask.
         for pmask in phasemask:
             unmasked_ind = np.where(p != pmask)
@@ -309,7 +318,7 @@ class ISOCMD:
 
         return masked_data
 
-    def get_data(self, hdr_names, phasemask, lage=None, age_ind=None, dmod=0.0):
+    def get_data(self, hdr_names, phasemask, lage=None, age_ind=None, dmod=0.0, mrange=[]):
 
         # returns a dictionary of data with keys as converted header names and items as the corresp. data columns.
 
@@ -333,22 +342,22 @@ class ISOCMD:
             # will mask evolutionary phases accoring to 'phasemask' argument.
             if '-' in name:
                 splitnames = name.split('-')
-                data = self.get_masked(splitnames[0], phasemask=phasemask, age_ind=age_ind, dmod=dmod) - \
-                       self.get_masked(splitnames[1], phasemask=phasemask, age_ind=age_ind, dmod=dmod)
+                data = self.get_masked(splitnames[0], phasemask=phasemask, age_ind=age_ind, dmod=dmod, mrange=mrange) - \
+                       self.get_masked(splitnames[1], phasemask=phasemask, age_ind=age_ind, dmod=dmod, mrange=mrange)
             elif '+' in name:
                 splitnames = name.split('+')
-                data = self.get_masked(splitnames[0], phasemask=phasemask, age_ind=age_ind, dmod=dmod) + \
-                       self.get_masked(splitnames[1], phasemask=phasemask, age_ind=age_ind, dmod=dmod)
+                data = self.get_masked(splitnames[0], phasemask=phasemask, age_ind=age_ind, dmod=dmod, mrange=mrange) + \
+                       self.get_masked(splitnames[1], phasemask=phasemask, age_ind=age_ind, dmod=dmod, mrange=mrange)
             elif '*' in name:
                 splitnames = name.split('*')
-                data = self.get_masked(splitnames[0], phasemask=phasemask, age_ind=age_ind, dmod=dmod) * \
-                       self.get_masked(splitnames[1], phasemask=phasemask, age_ind=age_ind, dmod=dmod)
+                data = self.get_masked(splitnames[0], phasemask=phasemask, age_ind=age_ind, dmod=dmod, mrange=mrange) * \
+                       self.get_masked(splitnames[1], phasemask=phasemask, age_ind=age_ind, dmod=dmod, mrange=mrange)
             elif '/' in name:
                 splitnames = name.split('/')
-                data = self.get_masked(splitnames[0], phasemask=phasemask, age_ind=age_ind, dmod=dmod) / \
-                       self.get_masked(splitnames[1], phasemask=phasemask, age_ind=age_ind, dmod=dmod)
+                data = self.get_masked(splitnames[0], phasemask=phasemask, age_ind=age_ind, dmod=dmod, mrange=mrange) / \
+                       self.get_masked(splitnames[1], phasemask=phasemask, age_ind=age_ind, dmod=dmod, mrange=mrange)
             else:
-                data = self.get_masked(name, phasemask=phasemask, age_ind=age_ind, dmod=dmod)
+                data = self.get_masked(name, phasemask=phasemask, age_ind=age_ind, dmod=dmod, mrange=mrange)
 
             # will store the data column in a dictionary with the key as the column's corresponding name (converted).
             data_list.append((convert_name(name), data))
@@ -447,7 +456,7 @@ class ISOCMD:
 
         # get initial masses
         self.init_masses = list((self.get_data(['initial_mass'], phasemask, age_ind=age_ind)).values())[0]
-        self.init_masses = np.array(map(float, self.init_masses))
+        self.init_masses = np.array(list(map(float, self.init_masses)))
 
         # sets labels if given an axis...not necessary?:
         if ax is not None:
@@ -593,7 +602,7 @@ class ISOCMD:
 
         return self.x, self.y
 
-    def colormi(self, ax, limits, cmap=plt.cm.cool):
+    def colormi(self, limits, ax=None, cmap=plt.cm.cool):
 
         mrange_i = (min(limits) <= self.init_masses) & (self.init_masses <= max(limits))
 
@@ -601,9 +610,10 @@ class ISOCMD:
         print(mi)
         x = self.x[mrange_i]
         y = self.y[mrange_i]
-        ax, lc = color_lineby_z(x, y, mi, min(mi), max(mi), ax, cmap=cmap)
+        if ax is not None:
+            ax, lc = color_lineby_z(x, y, mi, min(mi), max(mi), ax, cmap=cmap)
 
-        return
+        return x, y
         
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -650,7 +660,7 @@ class EEP:
             if isinstance(self.filename, list):
                 # find the closest mass:
                 masslist = self.filename
-                masslist = map(float, masslist)
+                masslist = list(map(float, masslist))
                 diffarr = abs(np.array(masslist) - mass)
                 close_idx = np.where(diffarr == diffarr.min())[0][0]
                 mass = masslist[close_idx]
