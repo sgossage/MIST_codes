@@ -8,28 +8,32 @@ import os
 import glob
 import seaborn as sns
 from collections import OrderedDict
+from pltstyle.plotstyle import set_style
+set_style()
 # no seaborn gridlines on plot, and white bg:
-sns.set_context('paper')
-sns.set(font='serif')
-sns.set_style("ticks", {'font.family' : 'serif', 'font.serif': ['Times', 'Palatino', 'serif']})
-plt.axes(frameon=False)
+#sns.set_context('paper')
+#sns.set(font='serif')
+#sns.set_style("ticks", {'font.family' : 'serif', 'font.serif': ['Times', 'Palatino', 'serif']})
+#plt.axes(frameon=False)
 
 from MIST_codes.scripts.fileio import *
 from MIST_codes.scripts.gdiso import *
 from MIST_codes.scripts import read_geneva as rg
 from MIST_codes.scripts import isomist
 
-params = {'axes.labelsize': 20,'axes.titlesize':20, 'font.size': 14, 'xtick.labelsize': 14, 'ytick.labelsize': 14}
-mpl.rcParams.update(params)
+#params = {'axes.labelsize': 20,'axes.titlesize':20, 'font.size': 14, 'xtick.labelsize': 14, 'ytick.labelsize': 14}
+#mpl.rcParams.update(params)
 
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 #from mpl_toolkits.axes_grid1.anchored_artists import AnchoredText
 from matplotlib.offsetbox import AnchoredText
+from matplotlib.patches import Rectangle
 
 # plot font sizing:
-params = {'axes.labelsize':20, 'axes.titlesize': 20, 'font.size':14,
-          'xtick.labelsize': 14, 'ytick.labelsize': 14}
-mpl.rcParams.update(params)
+mpl.rcParams.update(set_style())
+#{'axes.labelsize':20, 'axes.titlesize': 20, 'font.size':14,
+          #'xtick.labelsize': 14, 'ytick.labelsize': 14, 'font.family':"serif", 'mathtext.fontset':'stix'}
+#mpl.rcParams.update(params)
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -400,7 +404,7 @@ class ISOCMD:
   
         # extra tag conversions (to less eye soring versions):
         if 'mlta' in exttag:
-            exttag = r"$\alpha_{MLT}=$"+"{:s}".format(exttag.split('mlta')[-1]) 
+            exttag = r"$\alpha_{\rm{MLT}}=$"+"{:s}".format(exttag.split('mlta')[-1]) 
    
         # Creates a plot (legend) label for the isochrone.
         if lgdlbl == None:
@@ -413,7 +417,7 @@ class ISOCMD:
             if 'feh' not in labels:
                 lbl = lbl.replace('[Fe/H] = {:.2f}, '.format(self.feh), '')
             if 'vvc' not in labels:
-                lbl = lbl.replace(r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} '.format(self.rot), '')
+                lbl = lbl.replace(r'$\frac{\Omega}{\Omega_c}$' + ' = {:.1f} '.format(self.rot), '')
             if 'inc' not in labels:
                 lbl = lbl.replace('(i = {:.1f})'.format(self.gdark_i), '')
             # check for cleanup of leftover comma and colon:
@@ -428,24 +432,39 @@ class ISOCMD:
         # for creating text labels:
         if texts is not None:
             if isinstance(texts, list):
-                textlbl = ''
+                #textlbl = ''
+                strs = []
                 for ele in texts:
                     if ele == 'age':
-                        textlbl += 'age = {:s}\n'.format(lage_str)
+                        strs.append('age = {:s}'.format(lage_str))
                     elif ele =='feh' in texts:
-                        textlbl += '[Fe/H] = {:.2f}\n'.format(self.feh)
+                        strs.append('[Fe/H] = {:.2f}'.format(self.feh))
                     elif ele == 'vvc' in texts:
-                        textlbl += r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f}\n'.format(self.rot)
+                        strs.append(r'$\frac{\Omega}{\Omega_c}$' + ' = {:.1f}'.format(self.rot))
                     elif ele == 'inc' in texts:
-                        textlbl += 'i = {:.1f}\n'.format(self.gdark_i)
+                        strs.append('i = {:.1f}'.format(self.gdark_i)+r'$^{\circ}$')
                     else:
-                        textlbl += '{:s}\n'.format(ele)
+                        strs.append('{:s}'.format(ele))
+                self.txtlbl = strs
 
-                self.txtlbl = textlbl
+#                else:
+#                    for ele in texts:
+#                        if ele == 'age':
+#                            textlbl += 'age = {:s}\n'.format(lage_str)
+#                        elif ele =='feh' in texts:
+#                            textlbl += '[Fe/H] = {:.2f}\n'.format(self.feh)
+#                        elif ele == 'vvc' in texts:
+#                            textlbl += r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f}\n'.format(self.rot)
+#                        elif ele == 'inc' in texts:
+#                            textlbl += 'i = {:.1f}\n'.format(self.gdark_i)
+#                        else:
+#                            textlbl += '{:s}\n'.format(ele)
+#
+#                self.txtlbl = textlbl
             
             # if a ready made string is provided:
             elif isinstance(texts, str):
-                self.txtlbl = texts
+                self.txtlbl = [texts]
         else:
             self.txtlbl = None 
 
@@ -506,7 +525,8 @@ class ISOCMD:
 
         return base_line, sc
 
-    def isoplot(self, ax, masses=None, xlims=None, ylims=None, shade=None, legend=False, label=False, setlim=False, title=False, obs=None, **kwargs):
+    def isoplot(self, ax, masses=None, xlims=None, ylims=None, shade=None, legend=False, label=False, setlim=False, 
+                title=False, obs=None, justify_lbl=None, lcon=False, **kwargs):
 
         """
             Plots CMD of a MIST isochrone object.
@@ -524,28 +544,69 @@ class ISOCMD:
         """
 
         # Plot a CMD of red vs. blue - red:
-        if  shade > 1.0 or shade < 0.0 and shade != None:
-            shade = 0.0
-            print("Warning: shade should be between 0 and 1.")
-
         # Alter shade of line:
         if shade != None:
+            if  shade > 1.0 or shade < 0.0:
+                shade = 0.0
+                print("Warning: shade should be between 0 and 1; defaulting to 0.0.")
+
             lc = plt.cm.Dark2(shade)
             kwargs['c'] = lc
 
-        # Add (predefined) text label:
+        # Add (predefined) text label (deprecate?):
         if isinstance(label, bool):
             if label == True:                
                 # handles text labels via AnchoredText (self.txtlbl set in set_isodata()):
                 if self.txtlbl != None:
-                    at = AnchoredText(self.txtlbl, frameon=False, loc = 1)
-                    ax.add_artist(at)
+                    #at = AnchoredText(self.txtlbl, **label)
+                    proxarts.append(Rectangle((0,0), 1, 1, fc='w', fill=False, edgecolor='none', alpha=0.0, linewidth=0, label=self.txtlbl))
+                    lg = ax.legend(handles=proxarts, **label)
+                    # right/left align text
+                    if justify_lbl == 'right':
+                        vp = lg._legend_box._children[-1]._children[0]
+                        vp.align ='right'
+                    elif justify_lbl == 'left':
+                        vp = lg._legend_box._children[-1]._children[0]
+                        for c in vp._children:
+                            c._children.reverse()
+                        vp.align ='left'
+
+                    ax.add_artist(lg)
+
         elif isinstance(label, dict):
             # label may be passed as a dictionary for AnchoredText kwargs; 
             # e.g. label={"frameon":False,"prop":dict(size=8),"loc":2}
             if self.txtlbl != None:
-                at = AnchoredText(self.txtlbl, **label)
-                ax.add_artist(at)
+                proxarts = []
+                if len(self.txtlbl) == 1:
+                    lbls = (self.txtlbl[0]).split('\n')
+                elif len(self.txtlbl) > 1:
+                    lbls = self.txtlbl
+                for lbl in lbls:
+                    # invisible artists for text labels
+                    proxarts.append(Rectangle((0,0), 1, 1, edgecolor='none',alpha=0.0, linewidth=0, label=lbl))
+                if lcon:
+                    proxarts.append(Rectangle((0,0), 1, 1, facecolor=kwargs['c'], edgecolor='none',alpha=0.6, linewidth=0, label=''))             
+
+                lg = ax.legend(handles=proxarts, **label)
+                # right/left align text
+                if justify_lbl == 'right':
+                    print('aligning right')
+                    vp = lg._legend_box._children[-1]._children[0]
+                    if lcon:
+                        vp._children[-1]._children.reverse()
+                    vp.align ='right'
+                elif justify_lbl == 'left':
+                    vp = lg._legend_box._children[-1]._children[0]
+                    for c in vp._children:
+                        c._children.reverse()
+                    if lcon:
+                        vp._children[-1]._children.reverse()
+                    vp.align ='left'
+
+                print(ax)
+                # add legend w/ text labels to ax:
+                ax.add_artist(lg)
 
         # line width = 1
         kwargs['lw'] = 1
@@ -600,7 +661,7 @@ class ISOCMD:
             # e.g. label={"frameon":False,"prop":dict(size=8),"loc":'upper right'}
             legend = ax.legend(**legend)
 
-        return self.x, self.y
+        return self.x, self.y, base_line
 
     def colormi(self, limits, ax=None, cmap=plt.cm.cool):
 
@@ -771,12 +832,14 @@ class EEP:
             phasemask = [-1,2,3,4,5,6,9]
         self.phasemask = phasemask
 
-        if  shade > 1.0 or shade < 0.0 and shade != None:
-            shade = 0.0
-            print("Warning: shade must be between 0 and 1.")
         if shade != None:
+            if  shade > 1.0 or shade < 0.0:
+                shade = 0.0
+                print("Warning: shade must be between 0 and 1; defaulting to 0.0.")
+
             lc = plt.cm.Dark2(shade)
             kwargs['c'] = lc
+
         if not MIST_on:
             kwargs['alpha'] = 0.0
 
@@ -814,9 +877,9 @@ class EEP:
             ax = fig.add_subplot(111)
 
         if xlabel:
-            ax.set_xlabel(r'$log(T_{eff})$')
+            ax.set_xlabel(r'$\rm{log}(T_{eff})$')
         if ylabel:
-            ax.set_ylabel(r'$log(L/L_{\odot})$')
+            ax.set_ylabel(r'$\rm{log}(L/L_{\odot})$')
     
         if label == True:
             kwargs['label'] = self.lbl
