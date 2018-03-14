@@ -8,8 +8,8 @@ import os
 import glob
 import seaborn as sns
 from collections import OrderedDict
-from pltstyle.plotstyle import set_style
-set_style()
+from MIST_codes.scripts.plotstyle import set_style
+#set_style()
 # no seaborn gridlines on plot, and white bg:
 #sns.set_context('paper')
 #sns.set(font='serif')
