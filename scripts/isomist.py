@@ -1,7 +1,7 @@
 import os
 import glob
 
-def createcmd(iso_filename, photstr='UBVRIplus', Av=None, gravdark_i = 0.0):
+def createcmd(iso_filename, photstr='UBVRIplus', Av=None, gravdark_i = 0.0, force=False):
 
     """
         This function will find a number of MIST .iso files and run A. Dotter's make_cmd code using them to create
@@ -31,9 +31,9 @@ def createcmd(iso_filename, photstr='UBVRIplus', Av=None, gravdark_i = 0.0):
     # Switch to the iso code directory:
     os.chdir(isocodedir)
 
-    out_fname = filename + '.cmd'
+    out_fname = filename.split('.iso')[0] +'_{:s}'.format(photstr) + '.iso.cmd'
     # check if the .cmd file already exists; it may not need to be recreated:
-    if os.path.isfile(out_fname):
+    if os.path.isfile(out_fname) and not force:
         #print("The .cmd file \"{:s}\" already exists...".format(out_fname))
         with open(out_fname, 'r') as cmdf:
             cmdflines = cmdf.readlines()

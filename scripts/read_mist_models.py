@@ -180,7 +180,7 @@ class ISOCMD:
     
     """
     
-    def __init__(self, feh=0.00, vvcrit=0.0, ebv=0.0, gravdark_i=0.0, exttag=None, filename=None, verbose=False, version = '1.0'):
+    def __init__(self, feh=0.00, vvcrit=0.0, ebv=0.0, gravdark_i=0.0, exttag=None, filename=None, verbose=False, version = '1.0', photstr='UBVRIplus', forcecreate=False):
     
         """
         
@@ -215,7 +215,7 @@ class ISOCMD:
                 self.filename = filename
         else:
             iso_filename = ISO(feh = feh, vvcrit = vvcrit, gravdark_i = gravdark_i, exttag = exttag, read=False, filename=filename, version = version).filename
-            self.filename = isomist.createcmd(iso_filename, Av = Av, gravdark_i = gravdark_i)
+            self.filename = isomist.createcmd(iso_filename, Av = Av, gravdark_i = gravdark_i, photstr=photstr)
 
 
         self.exttag = exttag
