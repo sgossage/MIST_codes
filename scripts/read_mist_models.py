@@ -210,7 +210,7 @@ class ISOCMD:
         if filename != None:
             if '.cmd' not in filename:
                 iso_filename = ISO(feh = feh, vvcrit = vvcrit, gravdark_i = gravdark_i, exttag = exttag, read=False, filename=filename, version = version).filename
-                self.filename = isomist.createcmd(iso_filename, Av = Av, gravdark_i = gravdark_i)
+                self.filename = isomist.createcmd(iso_filename, Av = Av, gravdark_i = gravdark_i, photstr=photstr)
             else:
                 self.filename = filename
         else:
@@ -241,7 +241,7 @@ class ISOCMD:
             filename: the name of .iso.cmd file.
         
         """
-        
+        print(self.filename)
         #open file and read it in
         with open(self.filename) as f:
             content = [line.split() for line in f]
@@ -258,6 +258,7 @@ class ISOCMD:
         counter = 0
         data = content[10:]
         for i_age in range(num_ages):
+            #print(counter)
             #grab info for each isochrone
             num_eeps = int(data[counter][-2])
             num_cols = int(data[counter][-1])
@@ -317,8 +318,13 @@ class ISOCMD:
             # keep indices matching between x, y, and p
             p = p[unmasked_ind]                    
             x = x[unmasked_ind]
-
-        masked_data = x + dmod
+            
+        # these .iso.cmd data columns are not magnitudes:
+        non_mags = ['EEP','log10_isochrone_age_yr','initial_mass','star_mass','log_Teff','log_g','log_L','[Fe/H]_init','[Fe/H]','phase']
+        if hdr_name not in non_mags:
+            masked_data = x + dmod
+        else:
+            masked_data = x
 
         return masked_data
 

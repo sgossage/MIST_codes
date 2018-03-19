@@ -31,31 +31,36 @@ def createcmd(iso_filename, photstr='UBVRIplus', Av=None, gravdark_i = 0.0, forc
     # Switch to the iso code directory:
     os.chdir(isocodedir)
 
-    out_fname = filename.split('.iso')[0] +'_{:s}'.format(photstr) + '.iso.cmd'
+    out_fname = filename + '.cmd'
+    final_out_fname = filename.split('.iso')[0] +'_{:s}'.format(photstr) + '.iso.cmd'
     # check if the .cmd file already exists; it may not need to be recreated:
-    if os.path.isfile(out_fname) and not force:
+    if os.path.isfile(final_out_fname) and not force:
         #print("The .cmd file \"{:s}\" already exists...".format(out_fname))
-        with open(out_fname, 'r') as cmdf:
+        with open(final_out_fname, 'r') as cmdf:
             cmdflines = cmdf.readlines()
         # Check if extinction in the currently existing .cmd file matches desired value:
         if "{:.3f}".format(float(cmdflines[8].split()[-1])) == "{:.3f}".format(Av):
             #print("Desired Av = {:.3f} matches existing Av = {:.3f}; the existing .cmd file will be used.".format(Av, float(cmdflines[8].split()[-1])))
             pass
         else:
+            print("Recreating .cmd file: {:s} with new Av = {:.3f}".format(final_out_fname, Av))
             #print("Desired Av = {:.3f} does not match existing Av = {:.3f}; creating a new .cmd file...".format(Av, float(cmdflines[8].split()[-1])))
             os.system('./make_cmd ' + photstr + ' ' + filename + ' ' + str(Av))
+            os.rename(out_fname, final_out_fname)
 
     else:
-        print("Creating .cmd file: {:s}".format(out_fname))
+        print("Creating .cmd file: {:s}".format(final_out_fname))
         # For each .iso file, run the iso code:
         if Av == None:
             os.system('./make_cmd ' + photstr + ' ' + filename)
         else:
             os.system('./make_cmd ' + photstr + ' ' + filename + ' ' + str(Av))
 
+        os.rename(out_fname, final_out_fname)
+
     # Return to former directory:
     os.chdir(initdir)
 
     # output .cmd file is the same as the .iso file, but with .cmd appended to it:
     #out_fnames = [isofile + '.cmd' for isofile in isofiles]
-    return out_fname
+    return final_out_fname
