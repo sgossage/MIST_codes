@@ -25,7 +25,7 @@ Acknowledgment:
 import sys
 import numpy as np
 
-import calc_xyz
+from MIST_codes.scripts import calc_xyz
     
 def make_inlist_inputs(runname, Z, vvcstr, startype):
     
@@ -72,7 +72,7 @@ def make_inlist_inputs(runname, Z, vvcstr, startype):
 
     #Create mass lists
     mapfunc = lambda var: np.str(int(var)) if var == int(var) else np.str(var)
-    masslist = map(mapfunc, bigmassgrid[massindex])
+    masslist = list(map(mapfunc, bigmassgrid[massindex]))
 
     # Create vvc list:
     vvclist = list([vvcstr]*np.size(massindex))

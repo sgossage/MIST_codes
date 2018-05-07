@@ -17,8 +17,8 @@ import shutil
 import subprocess
 import sys
 
-import make_blend_input_file
-import make_iso_input_file
+from MIST_codes.scripts import make_blend_input_file
+from MIST_codes.scripts import make_iso_input_file
 
 # SSG added the custom_path argument in order to allow specification of a new directory.
 # The intent was to allow for recreation of the .iso file for a run, e.g. if I wanted to

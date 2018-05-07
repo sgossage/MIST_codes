@@ -45,9 +45,9 @@ def call_isointerp(vvcrit, feh, cov=None, custom_isopath = None, exttag = None):
 
     # We will sort the dictionary keys (file names or feh strings) by their values (feh values):
     isofname_list = sorted(isodict, key=isodict.__getitem__)
-    print(isofname_list)
+    #print(isofname_list)
     fehstr_list = sorted(fehdict, key=fehdict.__getitem__)
-    print(fehstr_list)
+    #print(fehstr_list)
     filestr_lines = [(fehstr_list[i], isofname_list[i]) for i in range(len(feh_masterlist))]
 
     # isofiles is now a list of the .iso files available at the given vvcrit value.

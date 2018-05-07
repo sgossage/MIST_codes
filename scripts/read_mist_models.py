@@ -28,6 +28,7 @@ from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 #from mpl_toolkits.axes_grid1.anchored_artists import AnchoredText
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.patches import Rectangle
+import matplotlib.lines as mlines
 
 # plot font sizing:
 mpl.rcParams.update(set_style())
@@ -46,7 +47,7 @@ class ISO:
     
     """
     
-    def __init__(self, feh = 0.00, vvcrit = 0.0, filename = None, gravdark_i = 0.0, exttag = None, verbose=False, read=True, version='1.0'):
+    def __init__(self, feh = 0.00, vvcrit = 0.0, filename = None, gravdark_i = None, exttag = None, verbose=False, read=True, version='1.0'):
     
         """
         
@@ -83,7 +84,7 @@ class ISO:
         if read:
             self.version, self.abun, self.rot, self.ages, self.num_ages, self.hdr_list, self.isos = self.read_iso_file()
         # Check if gravity darkening is desired:
-        if gravdark_i > 0.0:
+        if gravdark_i is not None:
             #print("Checking for gravity darkened .iso file...")
             # Will check for GDed .iso file; creates one if nec.
             gdisoname = filename.split('.iso')[0] + '_gdark{:.1f}.iso'.format(gravdark_i)
@@ -180,10 +181,11 @@ class ISOCMD:
     
     """
     
-    def __init__(self, feh=0.00, vvcrit=0.0, ebv=0.0, gravdark_i=0.0, exttag=None, filename=None, verbose=False, version = '1.0', photstr='UBVRIplus', forcecreate=False):
+    def __init__(self, feh=0.00, vvcrit=0.0, ebv=0.0, gravdark_i=None, exttag=None, filename=None, verbose=False, version = '1.0', photstr='UBVRIplus', forcecreate=False):
     
         """
-        
+        Av = 3.1*E(B-V)        
+
         Args:
             filename: the name of .iso.cmd file.
         
@@ -404,9 +406,9 @@ class ISOCMD:
 
         # For labeling age in potential plots, :
         if lage >= 9.0:
-            lage_str = "{:.1f} Gyr".format((10**lage)/(10.**9))
+            lage_str = "{:d} Gyr".format(int((10**lage)/(10.**9)))
         if 6.0 <= lage < 9.0:
-            lage_str = "{:.1f} Myr".format((10**lage)/(10.**6))
+            lage_str = "{:d} Myr".format(int((10**lage)/(10.**6)))
   
         # extra tag conversions (to less eye soring versions):
         if 'mlta' in exttag:
@@ -414,8 +416,12 @@ class ISOCMD:
    
         # Creates a plot (legend) label for the isochrone.
         if lgdlbl == None:
-            lbl = 'MIST({:s}): age = {:s}, [Fe/H] = {:.2f}, '.format(exttag, lage_str, self.feh) + \
+            if self.gdark_i is not None:
+                lbl = 'MIST({:s}): age = {:s}, [Fe/H] = {:.2f}, '.format(exttag, lage_str, self.feh) + \
                           r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f} (i = {:.1f})'.format(self.rot, self.gdark_i)
+            else:
+                lbl = 'MIST({:s}): age = {:s}, [Fe/H] = {:.2f}, '.format(exttag, lage_str, self.feh) + \
+                          r'$\frac{\Omega}{\Omega_c}$' + '  = {:.1f}'.format(self.rot)
             if 'exttag' not in labels and exttag != None:
                 lbl = lbl.replace('({:s})'.format(exttag), '')
             if 'age' not in labels:
@@ -565,7 +571,8 @@ class ISOCMD:
                 # handles text labels via AnchoredText (self.txtlbl set in set_isodata()):
                 if self.txtlbl != None:
                     #at = AnchoredText(self.txtlbl, **label)
-                    proxarts.append(Rectangle((0,0), 1, 1, fc='w', fill=False, edgecolor='none', alpha=0.0, linewidth=0, label=self.txtlbl))
+                    #proxarts.append(Rectangle((0,0), 1, 0.00, fc='w', fill=False, edgecolor='none', alpha=0.0, linewidth=0, label=self.txtlbl))
+                    proxarts.append(mlines.Line2D([],[],alpha=0.0,label=self.txtlbl))
                     lg = ax.legend(handles=proxarts, **label)
                     # right/left align text
                     if justify_lbl == 'right':
@@ -590,9 +597,11 @@ class ISOCMD:
                     lbls = self.txtlbl
                 for lbl in lbls:
                     # invisible artists for text labels
-                    proxarts.append(Rectangle((0,0), 1, 1, edgecolor='none',alpha=0.0, linewidth=0, label=lbl))
+                    #proxarts.append(Rectangle((0,0), 1, 0.00, edgecolor='none',alpha=0.0, linewidth=0, label=lbl))
+                    proxarts.append(mlines.Line2D([],[],alpha=0.0,label=lbl))
                 if lcon:
-                    proxarts.append(Rectangle((0,0), 1, 1, facecolor=kwargs['c'], edgecolor='none',alpha=0.6, linewidth=0, label=''))             
+                    #proxarts.append(Rectangle((0,0), 1, 0.00, facecolor=kwargs['c'], edgecolor='none',alpha=0.6, linewidth=0, label=''))
+                    proxarts.append(mlines.Line2D([],[], c = kwargs['c'], alpha=0.6,label=''))             
 
                 lg = ax.legend(handles=proxarts, **label)
                 # right/left align text
@@ -695,7 +704,7 @@ class EEP:
     
     """
     
-    def __init__(self, feh=0.00, vvcrit=0.0, mass=1.0, filename=None, gravdark_i = 0.0, exttag = None, verbose=True):
+    def __init__(self, feh=0.00, vvcrit=0.0, mass=1.0, filename=None, gravdark_i = None, exttag = None, verbose=True):
         
         """
         
@@ -744,14 +753,15 @@ class EEP:
         # reads the MIST version number, abundances, v/vcrit, initial mass, header list, data (eeps):
         self.version, self.abun, self.rot, self.minit, self.hdr_list, self.eeps = self.read_eep_file()
 
-        if gravdark_i > 0.0:
+        if gravdark_i is not None:
             # rewrite the luminosity and effective temp according to grav. darkening:
             self.filename = rw_gdeep(self, self.filename, gravdark_i)
             self.version, self.abun, self.rot, self.minit, self.hdr_list, self.eeps = self.read_eep_file()
+            self.lbl = r'MIST: M = {:.2f}'.format(self.minit)+r' $M_{\odot}$, '+r'$\Omega/\Omega_c$'+' = {:.1f}, i = {:.2f} deg'.format(self.rot, self.gravdark_i)
+        else:
+            self.lbl = r'MIST: M = {:.2f}'.format(self.minit)+r' $M_{\odot}$, '+r'$\Omega/\Omega_c$'+' = {:.1f}'.format(self.rot)
 
         self.gravdark_i = gravdark_i
-
-        self.lbl = r'MIST: M = {:.2f}'.format(self.minit)+r' $M_{\odot}$, '+r'$\Omega/\Omega_c$'+' = {:.1f}, i = {:.2f} deg'.format(self.rot, self.gravdark_i)
 
     def read_eep_file(self):
         
@@ -807,7 +817,7 @@ class EEP:
         ages = self.get_masked(['star_age'], phasemask=phasemask)[0]
         return ages[-1] - ages[0]
         		
-    def plot_HR(self, fignum=0, phases=[], phasecolor=[], phasemask = [], ax = None, shade = 0.0, cbar_valname = None, masslbl=True, vvclbl=False,
+    def plot_HR(self, fignum=0, phases=[], phasecolor=[], phasemask = [], ax = None, shade = 0.0, cbar_valname = None, masslbl=True, masslbl_s=16, vvclbl=False,
                 title=None, xlims = None, ylims = None, agemarks = None, legend = None, label=False, showplt = False, savename = None, xlabel=True,
                 ylabel = True, geneva_on=False, geneva_lbl=False, MIST_on = True, setlim=False, **kwargs):
         
@@ -967,7 +977,7 @@ class EEP:
 
         # mark the tracks if desired:
         if masslbl or vvclbl:
-            curr_xlims, curr_ylims = self.mark_track(ax, xlims = xlims, ylims = ylims, masslbl=masslbl, vvclbl=vvclbl)
+            curr_xlims, curr_ylims = self.mark_track(ax, xlims = xlims, ylims = ylims, masslbl=masslbl, masslbl_s=masslbl_s, vvclbl=vvclbl)
         
         # apply a 1% pad to the axes:
         curr_xlims, curr_ylims = expand_lims(ax, ypad=0.01, xpad=0.001)
@@ -1025,7 +1035,7 @@ class EEP:
         else:
             return x, y
 
-    def mark_track(self, ax, xlims, ylims, masslbl=True, vvclbl=False):
+    def mark_track(self, ax, xlims, ylims, masslbl=True, masslbl_s=16, vvclbl=False):
         # Code responsible for making marks on the track and coloring it:
         #--------------------------------------------------------------------------------------
         # for placement on first loop if masking SGB+ (phase label 2):
@@ -1075,9 +1085,9 @@ class EEP:
             txtx = txtx+abs(txtx)*xfac
             txty = txty-abs(txty)*yfac
             if not (self.minit).is_integer():
-                ax.text(txtx, txty, "{:.2f} ".format(self.minit) + r'$M_{\odot}$', fontsize = 16)
+                ax.text(txtx, txty, "{:.2f} ".format(self.minit) + r'$M_{\odot}$', fontsize = masslbl_s)
             else:
-                ax.text(txtx, txty, "{:d} ".format(int(self.minit)) + r'$M_{\odot}$', fontsize = 16)
+                ax.text(txtx, txty, "{:d} ".format(int(self.minit)) + r'$M_{\odot}$', fontsize = masslbl_s)
 
         # expand the axes to make space for new text.
         xlims, ylims = expand_lims(ax, x=txtx, y=txty, reverse_x=True)
@@ -1385,6 +1395,9 @@ def convert_name(aname):
                        'Tycho_V': 'V_T',
                        'Bessell_B': 'B',
                        'Bessell_V': 'V',
+                       'Gaia_G_DR2Rev': 'G',
+                       'Gaia_BP_DR2Rev': 'G_{BP}',
+                       'Gaia_RP_DR2Rev': 'G_{RP}',
                        'log_Teff': 'log T_{eff}',
                        'log_L': 'log L/L_{\odot}'
                        }

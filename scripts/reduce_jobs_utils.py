@@ -4,8 +4,8 @@ import csv
 import subprocess
 import datetime
 
-from scripts import mesa_hist_trim
-from scripts import reformat_massname
+from MIST_codes.scripts import mesa_hist_trim
+from MIST_codes.scripts import reformat_massname
 
 def gen_summary(rawdirname):
     

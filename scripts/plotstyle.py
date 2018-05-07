@@ -21,8 +21,9 @@ def set_style():
     # no axis frame
     plt.axes(frameon=False)
 
-    params = {'axes.labelsize':26, 'axes.titlesize': 20, 'font.size':14,
-              'xtick.labelsize': 14, 'ytick.labelsize': 14, 'font.family':"serif", 'mathtext.fontset':'stix'}
+    # 26, 20, 14, 14, 14, "serif", "stix"
+    params = {'axes.labelsize':32, 'axes.titlesize': 26, 'font.size':24,
+              'xtick.labelsize': 24, 'ytick.labelsize': 24, 'font.family':"serif", 'mathtext.fontset':'stix'}
     #mpl.rcParams.update(params)
 
     return params

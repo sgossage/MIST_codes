@@ -30,7 +30,7 @@ Acknowledgment:
 import numpy as np
 import os
 
-import reformat_massname
+from MIST_codes.scripts import reformat_massname
 
 def make_replacements(replist, name_str, direc='inlists', file_base='inlist_project_template', clear_direc=False):
     
@@ -49,11 +49,12 @@ def make_replacements(replist, name_str, direc='inlists', file_base='inlist_proj
             os.remove(os.path.join(direc, file))
     
     #Separate the keys from values
-    keys = [replist[i][0] for i in xrange(len(replist))]
-    vals = [replist[i][1] for i in xrange(len(replist))]
+    keys = [replist[i][0] for i in range(len(replist))]
+    vals = [replist[i][1] for i in range(len(replist))]
+    print(vals)
 
     numkey = np.shape(vals)[0]
-    nummass = np.shape(vals)[1]
+    nummass = np.shape(vals)[1] # was np.shape(vals)[1] 4/18/18
     perms = []
     
     #Generate a list of combinations
@@ -70,7 +71,7 @@ def make_replacements(replist, name_str, direc='inlists', file_base='inlist_proj
     for val_vec in perms:
         file_mod = file_base_contents
         inlist_file = name_str
-        for i in xrange(numkey):
+        for i in range(numkey):
             file_mod = file_mod.replace(keys[i], str(val_vec[i]))
             
             #For mass, change the decimal value to a uniform-length string
