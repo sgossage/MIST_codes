@@ -99,7 +99,7 @@ def gen_summary(rawdirname):
                         reason = 'socket_timed_out'
                         
         #Retrieve the run time information
-        dates = subprocess.Popen('grep [0-9][0-9]:[0-9][0-9]:[0-9][0-9] ' + listoutfiles[index], shell=True, stdout=subprocess.PIPE)
+        dates = subprocess.Popen('grep [0-9][0-9]:[0-9][0-9]:[0-9][0-9] ' + listoutfiles[index], shell=True, stdout=subprocess.PIPE, encoding='utf8')
         try:
             startdate, enddate = dates.stdout
             startdatelist = startdate.rstrip('\n').split(' ')
@@ -146,7 +146,7 @@ def gen_summary(rawdirname):
         #Populate the stat_summary dictionary
         stat_summary[mass] = "{:10}".format(status) + "{:50}".format(reason) + "{:25}".format(runtime)
 
-    keys = stat_summary.keys()
+    keys = list(stat_summary.keys())
     #Sort by mass in ascending order
     keys.sort()
     

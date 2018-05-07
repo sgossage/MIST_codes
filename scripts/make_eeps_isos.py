@@ -122,7 +122,7 @@ def make_eeps_isos(runname, basic=False, fsps=False, custom_path=None):
                 os.system("rm -f " + eepname)
                 continue        
             #Check the length of each EEP file and identify the ones that are incomplete
-            numeeps = int(subprocess.Popen('wc -l '+eepname, stdout=subprocess.PIPE, shell=True).stdout.read().split(' ')[-2])
+            numeeps = int(subprocess.Popen('wc -l '+eepname, stdout=subprocess.PIPE, shell=True, encoding='utf8').stdout.read().split(' ')[-2])
             mass_val = float(eepname.split('M.track')[0].split('/')[-1])/100.0
             if ((mass_val<=0.7)&(numeeps!=lowmass_num_lines)):
                 #print("numeeps = {:d}; lowmass_num_lines = {:d}".format(numeeps,lowmass_num_lines))
